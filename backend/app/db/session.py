@@ -6,13 +6,14 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from backend.app.config import settings
+from backend.app.db.url import create_engine_kwargs
 
 
 class Base(DeclarativeBase):
     pass
 
 
-engine = create_engine(settings.database_url, pool_pre_ping=True)
+engine = create_engine(settings.database_url, **create_engine_kwargs(settings.database_url))
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
 

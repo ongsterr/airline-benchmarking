@@ -53,7 +53,7 @@
 ## Quick start (Phase 1)
 
 ```bash
-cp .env.example .env   # set DATABASE_URL, optional GOOGLE_API_KEY
+cp .env.example .env   # set Neon DATABASE_URL, optional GOOGLE_API_KEY
 
 poetry install
 
@@ -71,3 +71,24 @@ cd frontend && npm install && npm run dev
 ```
 
 See [docs/architecture.md](./docs/architecture.md) for full details.
+
+## Phase 2 Development
+
+### Data Pipeline
+
+1. Build a Python data pipeline that can continuously extract cabin class flight features for target airline
+2. Build a lightweight LLM module using the existing codebase to search for the websites associated with target airline cabin class product features
+3. Extract the website URLs and extract the required data following the output schema provided. Use the existing prompt template as reference for good practice structure.
+4. The data pipeline can be triggered manually by running the scripts from the terminal
+5. The flight features are extracted at the airline > cabin class level. Integrate the dataset extracted with the existing database schema.
+
+### Backend API
+
+1. Build a FastAPI to support the frontend UI/UX
+2. Put a small focus on the efficiency of serving the right information to optimise the load performance of the frontend
+
+### Frontend UI
+
+1. Create an additional page for aircraft config details where there will be 2 main sections -> top section will show the aircraft level details and bottom section will show cabin class level details. The cabin class level details section will show both the hardward features and cabin class flight features, with cabin classes across the columns and features across the row. It will look like a comparison across multiple cabin classes.
+2. Add the cabin class flight features to the existing aircraft config comparison page to the bottom of the existing hardward features
+3. Add an additional page just to show compare airline -> cabin class level instead of the aircraft config level

@@ -68,7 +68,7 @@ flowchart LR
         P --> N[LLM normalize]
         N --> L[upsert Postgres]
     end
-    subgraph storage [Postgres emirates.benchmarking]
+    subgraph storage [Neon Postgres benchmarking schema]
         T1[airlines]
         T2[aircraft_configurations]
         T3[cabin_configurations]
@@ -175,7 +175,7 @@ python -m pipeline.run --airlines ek --limit 5 --force           # dev: re-fetch
 
 ## Database schema
 
-Schema: `benchmarking` in the `emirates` database.
+Schema: `benchmarking` in Neon Postgres (database name from your Neon project, e.g. `neondb`).
 
 | Table | Purpose | Key columns |
 |-------|---------|-------------|
@@ -214,42 +214,47 @@ Base URL: `http://localhost:8000`
 
 **Stack:** Next.js App Router, TypeScript, Tailwind CSS (via shadcn), shadcn/ui component library, TanStack Table for sortable/filterable data grids.
 
-**Design system (shadcn/ui):**
+**Design system (Linear light + LCM Hub layout):**
 
-- Initialise shadcn in `frontend/` (`npx shadcn@latest init`) with the default **light** theme
-- Customise CSS variables in `globals.css` for a compact, data-dense feel: tighter `--spacing`, smaller default font size, reduced table row padding
-- Core shadcn components: `table`, `card`, `badge`, `button`, `select`, `input`, `checkbox`, `tabs`, `separator`, `skeleton`, `tooltip`
-- App-level composites: `DataTable` (TanStack Table + shadcn `Table`), `StatCard` (`Card`), `AirlineBadge` (`Badge`), `CabinSelector` (`Select`/`Tabs`), `CompareGrid`
-- Consistent layout shell: top nav with `Tabs` linking the three views; shared page header pattern using `Card`
+- **Color palette:** Linear light theme in `frontend/app/globals.css` — canvas `#f7f8f8`, panels `#ffffff`, accent `#5e6ad2`, hairline borders `rgba(0,0,0,0.08)`. Semantic label colors (`--label-red`, `--label-blue`, etc.) for airline badges.
+- **Layout inspiration:** [LCM Hub](https://www.lcmhub.com) — section eyebrows, metric-first dashboards, card-contained data panels, consistent page template across views.
+- **Typography:** Inter (UI) + Geist Mono (config IDs); compact `text-sm` base, `text-xs` tables.
+- **Tokens:** `frontend/lib/design-tokens.ts` — table density classes, control widths, cabin keys, airline label mappings.
+- **Core shadcn components:** `table`, `card`, `badge`, `button`, `select`, `input`, `checkbox`, `tabs`, `separator`, `skeleton`, `tooltip`
+- **App-level composites:** `PageHeader`, `MetricCard`, `SectionCard`, `EmptyState`, `LoadingState`, `TableToolbar`, `AirlineBadge`
+- **Page template:** `PageHeader` → optional `MetricCard` grid → `SectionCard` with edge-to-edge table; shared empty/loading states
+- **Layout shell:** `AppShell` with shadcn `Tabs` (line variant) for Summary / Fleet / Compare navigation
 
 ### View 1 — Airline summary (`/`)
 
-- `Card` grid of airline stats + shadcn `Table` with one row per airline (EK, BA, AI)
-- Columns: Airline, Configs, Aircraft Types, Last Updated (Title Case headers)
-- Click row → navigate to View 2 with airline filter pre-applied
+- `PageHeader` + `MetricCard` grid + `SectionCard` with airline `Table`
+- Columns: Airline, Configs, Aircraft Types, Last Updated
+- Click airline → navigate to View 2 with airline filter pre-applied
 
 ### View 2 — Fleet detail (`/fleet`)
 
-- Compact shadcn `DataTable` of all aircraft configurations across airlines
+- `PageHeader` with `TableToolbar` filters (airline, search) in actions slot
+- `SectionCard` with compact `Table` of all aircraft configurations
 - Columns: Airline, Aircraft Type, Config ID, Seat Layout, Seats, Ref URL (link to AeroLOPA `source_url`)
-- Filters: `Select` for airline/aircraft family; `Input` for config code search; `Checkbox` for row selection → comparison basket
-- Selected rows shown in a sticky `Card` footer with "Compare" `Button`
+- `Checkbox` row selection → sticky compare bar with shadcn `Button`
 
 ### View 3 — Compare (`/compare`)
 
-- User selects 2–4 aircraft configs (from View 2 basket or URL params)
-- `Tabs` or `Select` for cabin class (First / Business / Premium Economy / Economy)
-- shadcn `Table`: rows = features (aircraft-level block, then cabin-level block); columns = selected configs
-- Highlight differences with conditional `Badge` or subtle background via `cn()` utility
+- `PageHeader` with cabin `Tabs` in actions slot (First / Business / Premium Economy / Economy)
+- `SectionCard` compare `Table`: rows = features; columns = selected configs
+- Highlight differences with `bg-muted/60` and outline `Badge`
+- Empty state (`< 2` configs): `PageHeader` + `EmptyState` inside standard page structure
 
 **API integration:** `NEXT_PUBLIC_API_URL` env var; server components for initial data where beneficial, client components for interactive filters/compare. Use shadcn `Skeleton` for loading states.
 
 ## Local development
 
+**Database (Neon):** Copy the **Pooled connection** string from the [Neon console](https://console.neon.tech) into `.env` as `DATABASE_URL`. The app auto-converts `postgres://` URLs to the psycopg driver and adds `sslmode=require` for Neon hosts. URL-encode special characters in the password (e.g. `:` → `%3A`). After first setup or schema changes, run `poetry run python scripts/reset_schema.py`.
+
 ```bash
 # 1. Environment
 cp .env.example .env
-# Edit DATABASE_URL, GOOGLE_API_KEY
+# Edit DATABASE_URL (Neon pooled connection string), optional GOOGLE_API_KEY
 
 # 2. Python deps + migrations
 poetry install
@@ -302,7 +307,6 @@ See [`.env.example`](../.env.example).
 
 ## Open items
 
-- **Postgres connection string** — confirm host/port/user for `emirates.benchmarking` (in `.env`, not committed)
 - **Gemini API key** — provide `GOOGLE_API_KEY` locally
 - **Air India slug** — verify AeroLOPA uses `ai` during discovery; adjust config if different
 
@@ -318,7 +322,7 @@ Track significant architectural choices here. When a decision is reversed, mark 
 | KD-004 | **Parse embedded Next.js JSON first; LLM only for normalization** — not LLM-on-raw-HTML as primary path | Deterministic extraction from `self.__next_f.push(...)` payloads is cheaper, faster, and more reproducible; LLM maps irregular fields into [`output.py`](../output.py) shape | Full HTML → LLM extraction; rules-only mapping without LLM | 2026-06-29 |
 | KD-005 | **Gemini via Langchain** — default `gemini-2.5-pro`, swappable via `LLM_MODEL` | Matches readme requirement; Langchain gives model swap without code changes | Direct Google SDK only; other providers in Phase 1 | 2026-06-29 |
 | KD-006 | **`svg_id` as natural key** (e.g. `ek-359g`) for aircraft configurations | Stable AeroLOPA identifier; used in URLs, raw HTML paths, and compare UI | Composite key (airline + aircraft_type + config code) | 2026-06-29 |
-| KD-007 | **Postgres `benchmarking` schema** in existing `emirates` database | Reuses prepared local infra; isolates tables via schema namespace | Dedicated database; SQLite for dev | 2026-06-29 |
+| KD-007 | **Postgres `benchmarking` schema** on Neon cloud Postgres | Managed Postgres with SSL; isolates tables via schema namespace; same DB for local dev and Railway deploy | Local `emirates` database; SQLite for dev | 2026-06-29 (updated 2026-06-30) |
 | KD-008 | **JSONB for nested aircraft fields** — `seat_counts`, `wifi`, `seat_rating_summary` | Avoids wide sparse tables; matches document-shaped source data | Fully normalized child tables for every nested object | 2026-06-29 |
 | KD-009 | **Incremental pipeline** — `--skip-existing` skips extraction for configs already in DB; default always upserts after extraction | Reduces HTTP load, LLM cost, and re-run time when backfilling net-new configs | Always full re-fetch; cron-only freshness | 2026-06-29 |
 | KD-010 | **Manual CLI pipeline** (`python -m pipeline.run`) for Phase 1 | No scheduler/queue infra until refresh cadence is defined | Scheduled job (Railway cron, Airflow) in Phase 1 | 2026-06-29 |
@@ -335,6 +339,7 @@ Record notable architecture, schema, API, and deployment changes here (newest fi
 
 | Date | Change |
 |------|--------|
+| 2026-06-30 | Database: Neon Postgres support — URL normalization (`postgres://` → psycopg), SSL for `*.neon.tech`, pooled connection pool limits; `.env.example` updated |
 | 2026-06-29 | Pipeline CLI: `--skip-existing` skips extraction for configs already in DB; default re-runs always upsert (no DB write skip on matching `last_updated`); `--force` re-fetches HTML only |
 | 2026-06-29 | Pipeline data quality: enriched deterministic normalize, LLM deep-merge over base, `data/parsed/` artifacts, clearer updated/unchanged logging, `--force` re-writes DB |
 | 2026-06-29 | Merged Phase 1 development plan into `architecture.md` — pipeline stage detail, frontend view specs, DB column reference, implementation status |
