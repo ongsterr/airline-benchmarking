@@ -11,6 +11,7 @@ from backend.app.routers import aircraft as aircraft_router
 from backend.app.routers import airlines as airlines_router
 from backend.app.routers import compare as compare_router
 from shared.schemas import (
+    AircraftConfigUpdate,
     AircraftConfiguration,
     AircraftListItem,
     AirlineSummary,
@@ -66,6 +67,22 @@ def aircraft_detail(svg_id: str, db: Session = Depends(get_db)) -> AircraftConfi
     detail = aircraft_router.get_aircraft_detail(db, svg_id)
     if not detail:
         raise HTTPException(status_code=404, detail="Aircraft configuration not found")
+    return detail
+
+
+@app.patch("/api/v1/aircraft/{svg_id}", response_model=AircraftConfiguration)
+def update_aircraft(
+    svg_id: str,
+    body: AircraftConfigUpdate,
+    db: Session = Depends(get_db),
+) -> AircraftConfiguration:
+    try:
+        detail = aircraft_router.update_aircraft_config(db, svg_id, body)
+        db.commit()
+    except LookupError:
+        raise HTTPException(status_code=404, detail="Aircraft configuration not found") from None
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     return detail
 
 

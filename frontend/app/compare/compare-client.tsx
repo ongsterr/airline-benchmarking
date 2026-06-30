@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useEffect, useState } from "react";
+import { ExternalLink } from "lucide-react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { AirlineBadge } from "@/components/airline-badge";
 import { Badge } from "@/components/ui/badge";
+import { CompareValueCell } from "@/components/compare-column-editor";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
 import { LoadingState } from "@/components/loading-state";
@@ -26,21 +28,82 @@ import {
   TABLE_ROW_CLASS,
   type CabinKey,
 } from "@/lib/design-tokens";
+import { formatCompareValue, valuesEqual } from "@/lib/compare-fields";
 import { cn } from "@/lib/utils";
 import {
   CompareConfigColumn,
   CompareRow,
   getCompare,
+  updateAircraftConfig,
 } from "@/lib/api";
+
+type DraftValues = Record<string, unknown>;
 
 function isDifferent(values: Record<string, unknown>) {
   const vals = Object.values(values);
-  return new Set(vals.map(String)).size > 1;
+  return new Set(vals.map((v) => formatCompareValue(v))).size > 1;
 }
 
-function ColumnHeader({ column }: { column: CompareConfigColumn }) {
+function buildDraftFromRows(rows: CompareRow[], svgId: string): DraftValues {
+  const draft: DraftValues = {};
+  for (const row of rows) {
+    draft[row.field_key] = row.values[svgId] ?? null;
+  }
+  return draft;
+}
+
+function buildUpdatePayload(
+  rows: CompareRow[],
+  svgId: string,
+  draft: DraftValues,
+  cabinKey: CabinKey
+): {
+  aircraft: Record<string, string | number | boolean | null>;
+  cabins?: Record<string, Record<string, string | number | boolean | null>>;
+} {
+  const aircraft: Record<string, string | number | boolean | null> = {};
+  const cabin: Record<string, string | number | boolean | null> = {};
+
+  for (const row of rows) {
+    const initial = row.values[svgId] ?? null;
+    const next = draft[row.field_key] ?? null;
+    if (valuesEqual(initial, next)) continue;
+
+    const typedNext = next as string | number | boolean | null;
+    if (row.scope === "aircraft") {
+      aircraft[row.field_key] = typedNext;
+    } else {
+      cabin[row.field_key] = typedNext;
+    }
+  }
+
+  const cabins =
+    Object.keys(cabin).length > 0 ? { [cabinKey]: cabin } : undefined;
+
+  return { aircraft, cabins };
+}
+
+function ColumnHeader({
+  column,
+  isEditing,
+  isDirty,
+  saving,
+  error,
+  onEdit,
+  onSave,
+  onCancel,
+}: {
+  column: CompareConfigColumn;
+  isEditing: boolean;
+  isDirty: boolean;
+  saving: boolean;
+  error: string | null;
+  onEdit: () => void;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       <AirlineBadge slug={column.airline_slug} name={column.airline_name} />
       <div className="text-xs font-medium leading-tight">
         {column.aircraft_type_displayed || column.svg_id}
@@ -56,10 +119,50 @@ function ColumnHeader({ column }: { column: CompareConfigColumn }) {
         href={column.source_url}
         target="_blank"
         rel="noopener noreferrer"
-        className={cn("font-mono text-[10px]", TABLE_LINK_CLASS)}
+        className={cn(
+          "inline-flex items-center gap-0.5 font-mono text-[10px]",
+          TABLE_LINK_CLASS
+        )}
+        title="Open on AeroLOPA (new tab)"
       >
         {column.svg_id}
+        <ExternalLink className="size-2.5 shrink-0 opacity-70" aria-hidden />
       </a>
+      <div className="flex flex-wrap items-center gap-1 pt-0.5 pb-2">
+        {isEditing ? (
+          <>
+            <Button
+              size="sm"
+              className="h-6 px-2 text-[10px]"
+              disabled={!isDirty || saving}
+              onClick={onSave}
+            >
+              {saving ? "Saving…" : "Save"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 px-2 text-[10px]"
+              disabled={saving}
+              onClick={onCancel}
+            >
+              Cancel
+            </Button>
+          </>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-6 px-2 text-[10px]"
+            onClick={onEdit}
+          >
+            Edit
+          </Button>
+        )}
+      </div>
+      {error && (
+        <p className="text-[10px] text-destructive leading-tight">{error}</p>
+      )}
     </div>
   );
 }
@@ -72,21 +175,116 @@ export default function ComparePageClient() {
   const [columns, setColumns] = useState<CompareConfigColumn[]>([]);
   const [rows, setRows] = useState<CompareRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [editingSvgId, setEditingSvgId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<DraftValues>({});
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (ids.length < 2) return;
+    const idList = idsParam.split(",").filter(Boolean);
+    if (idList.length < 2) {
+      setColumns([]);
+      setRows([]);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
     setLoading(true);
-    getCompare(ids, cabin)
+
+    getCompare(idList, cabin)
       .then((data) => {
-        setColumns(data.columns);
-        setRows(data.rows);
+        if (!cancelled) {
+          setColumns(data.columns);
+          setRows(data.rows);
+        }
       })
       .catch(() => {
-        setColumns([]);
-        setRows([]);
+        if (!cancelled) {
+          setColumns([]);
+          setRows([]);
+        }
       })
-      .finally(() => setLoading(false));
-  }, [idsParam, cabin, ids.length]);
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [idsParam, cabin]);
+
+  useEffect(() => {
+    setEditingSvgId(null);
+    setDraft({});
+    setSaveError(null);
+  }, [cabin, idsParam]);
+
+  useEffect(() => {
+    if (!editingSvgId) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setEditingSvgId(null);
+        setDraft({});
+        setSaveError(null);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [editingSvgId]);
+
+  const startEditing = (svgId: string) => {
+    setEditingSvgId(svgId);
+    setDraft(buildDraftFromRows(rows, svgId));
+    setSaveError(null);
+  };
+
+  const cancelEditing = () => {
+    setEditingSvgId(null);
+    setDraft({});
+    setSaveError(null);
+  };
+
+  const isDirty = useMemo(() => {
+    if (!editingSvgId) return false;
+    return rows.some((row) => {
+      const initial = row.values[editingSvgId] ?? null;
+      const next = draft[row.field_key] ?? null;
+      return !valuesEqual(initial, next);
+    });
+  }, [draft, editingSvgId, rows]);
+
+  const handleSave = async () => {
+    if (!editingSvgId || !isDirty) return;
+    const { aircraft, cabins } = buildUpdatePayload(
+      rows,
+      editingSvgId,
+      draft,
+      cabin
+    );
+    if (
+      Object.keys(aircraft).length === 0 &&
+      (!cabins || Object.keys(cabins[cabin] ?? {}).length === 0)
+    ) {
+      return;
+    }
+
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await updateAircraftConfig(editingSvgId, { aircraft, cabins });
+      setEditingSvgId(null);
+      setDraft({});
+      const idList = idsParam.split(",").filter(Boolean);
+      const data = await getCompare(idList, cabin);
+      setColumns(data.columns);
+      setRows(data.rows);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to save changes");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (ids.length < 2) {
     return (
@@ -131,6 +329,7 @@ export default function ComparePageClient() {
             <Button
               variant="outline"
               size="sm"
+              nativeButton={false}
               render={<Link href={editUrl} />}
             >
               Edit selection
@@ -147,10 +346,27 @@ export default function ComparePageClient() {
               <TableHead className={TABLE_HEAD_CLASS}>Feature</TableHead>
               {displayIds.map((id) => {
                 const column = columnById.get(id);
+                const isEditing = editingSvgId === id;
                 return (
-                  <TableHead key={id} className={cn(TABLE_HEAD_CLASS, "min-w-36")}>
+                  <TableHead
+                    key={id}
+                    className={cn(
+                      TABLE_HEAD_CLASS,
+                      "min-w-36 align-top",
+                      isEditing && "bg-primary/5 ring-1 ring-inset ring-primary/20"
+                    )}
+                  >
                     {column ? (
-                      <ColumnHeader column={column} />
+                      <ColumnHeader
+                        column={column}
+                        isEditing={isEditing}
+                        isDirty={isDirty}
+                        saving={saving}
+                        error={isEditing ? saveError : null}
+                        onEdit={() => startEditing(id)}
+                        onSave={handleSave}
+                        onCancel={cancelEditing}
+                      />
                     ) : (
                       <span className="font-mono">{id}</span>
                     )}
@@ -168,7 +384,7 @@ export default function ComparePageClient() {
                 lastCategory = row.category;
                 const diff = isDifferent(row.values);
                 return (
-                  <Fragment key={`${row.category}-${row.feature}`}>
+                  <Fragment key={`${row.category}-${row.field_key}`}>
                     {showCategory && (
                       <TableRow className="bg-muted/50 hover:bg-muted/50">
                         <TableCell
@@ -183,23 +399,54 @@ export default function ComparePageClient() {
                       <TableCell className="py-1.5 text-muted-foreground">
                         {row.feature}
                       </TableCell>
-                      {displayIds.map((id) => (
-                        <TableCell
-                          key={id}
-                          className={cn(
-                            "py-1.5 tabular-nums",
-                            diff && "bg-muted/60"
-                          )}
-                        >
-                          {diff ? (
-                            <Badge variant="outline" className="font-normal">
-                              {String(row.values[id] ?? "—")}
-                            </Badge>
-                          ) : (
-                            String(row.values[id] ?? "—")
-                          )}
-                        </TableCell>
-                      ))}
+                      {displayIds.map((id) => {
+                        const isEditing = editingSvgId === id;
+                        const cellValue = isEditing
+                          ? (draft[row.field_key] ?? null)
+                          : (row.values[id] ?? null);
+                        const initialValue = row.values[id] ?? null;
+                        const isCellDirty =
+                          isEditing &&
+                          !valuesEqual(initialValue, draft[row.field_key] ?? null);
+
+                        return (
+                          <TableCell
+                            key={id}
+                            className={cn(
+                              "py-1.5 tabular-nums",
+                              diff && !isEditing && "bg-muted/60",
+                              isEditing && "bg-primary/5"
+                            )}
+                          >
+                            {isEditing ? (
+                              <CompareValueCell
+                                fieldKey={row.field_key}
+                                value={cellValue}
+                                isEditing
+                                isDirty={isCellDirty}
+                                diff={diff}
+                                onStartEdit={() => startEditing(id)}
+                                onChange={(value) =>
+                                  setDraft((prev) => ({
+                                    ...prev,
+                                    [row.field_key]: value,
+                                  }))
+                                }
+                              />
+                            ) : (
+                              <CompareValueCell
+                                fieldKey={row.field_key}
+                                value={cellValue}
+                                isEditing={false}
+                                isDirty={false}
+                                diff={diff}
+                                onStartEdit={() => startEditing(id)}
+                                onChange={() => {}}
+                              />
+                            )}
+                          </TableCell>
+                        );
+                      })}
                     </TableRow>
                   </Fragment>
                 );

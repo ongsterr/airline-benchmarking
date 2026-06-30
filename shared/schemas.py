@@ -141,8 +141,15 @@ class AircraftListItem(BaseModel):
 
 class CompareRow(BaseModel):
     feature: str
+    field_key: str
+    scope: Literal["aircraft", "cabin"]
     category: str
     values: dict[str, Any]
+
+
+class AircraftConfigUpdate(BaseModel):
+    aircraft: dict[str, Any] = Field(default_factory=dict)
+    cabins: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
 
 class CompareConfigColumn(BaseModel):

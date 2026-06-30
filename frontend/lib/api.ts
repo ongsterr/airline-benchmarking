@@ -34,6 +34,8 @@ export type AircraftListItem = {
 
 export type CompareRow = {
   feature: string;
+  field_key: string;
+  scope: "aircraft" | "cabin";
   category: string;
   values: Record<string, string | number | boolean | null>;
 };
@@ -53,10 +55,19 @@ export type CompareResponse = {
   rows: CompareRow[];
 };
 
-async function fetchApi<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, { next: { revalidate: 60 } });
+export type AircraftConfigUpdate = {
+  aircraft?: Record<string, string | number | boolean | null>;
+  cabins?: Record<string, Record<string, string | number | boolean | null>>;
+};
+
+async function fetchApi<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    next: init?.method ? undefined : { revalidate: 60 },
+    ...init,
+  });
   if (!res.ok) {
-    throw new Error(`API error ${res.status}: ${path}`);
+    const body = await res.text();
+    throw new Error(`API error ${res.status}: ${body || path}`);
   }
   return res.json();
 }
@@ -85,4 +96,16 @@ export async function getCompare(
   const query = new URLSearchParams({ ids: ids.join(",") });
   if (cabin) query.set("cabin", cabin);
   return fetchApi(`/api/v1/compare?${query}`);
+}
+
+export async function updateAircraftConfig(
+  svgId: string,
+  body: AircraftConfigUpdate
+): Promise<void> {
+  await fetchApi(`/api/v1/aircraft/${encodeURIComponent(svgId)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
 }

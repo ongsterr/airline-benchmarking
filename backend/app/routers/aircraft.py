@@ -2,20 +2,31 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, joinedload
 
-from backend.app.models.entities import AircraftConfiguration, Airline
+from backend.app.models.entities import AircraftConfiguration, Airline, CabinConfiguration
 from backend.app.routers.aircraft_grouping import (
     _cabins_from_entity,
     _decks_for_record,
-    config_group_id,
+    _pick_primary,
     group_aircraft_rows,
     merge_detail_records,
     merge_list_items,
 )
+from shared.compare_fields import AIRCRAFT_FIELDS, CABIN_FIELDS, coerce_field_value
+from shared.schemas import AircraftConfigUpdate
 from shared.schemas import AircraftConfiguration as AircraftSchema
 from shared.schemas import AircraftListItem, SeatCounts, SeatRatingSummary, WifiInfo
+
+CABIN_TYPE_BY_KEY = {
+    "first": "F",
+    "business": "J",
+    "premium_economy": "W",
+    "economy": "M",
+}
 
 
 def list_aircraft(
@@ -110,3 +121,96 @@ def get_aircraft_detail(db: Session, svg_id: str) -> AircraftSchema | None:
     return None
 
   return merge_detail_records(members)
+
+
+def _resolve_group_members(db: Session, svg_id: str) -> list[AircraftConfiguration]:
+    direct = (
+        db.query(AircraftConfiguration)
+        .options(joinedload(AircraftConfiguration.cabins), joinedload(AircraftConfiguration.airline))
+        .filter(AircraftConfiguration.svg_id == svg_id)
+        .first()
+    )
+    if direct:
+        return [direct]
+
+    return (
+        db.query(AircraftConfiguration)
+        .options(joinedload(AircraftConfiguration.cabins), joinedload(AircraftConfiguration.airline))
+        .filter(AircraftConfiguration.parent_svg_id == svg_id)
+        .all()
+    )
+
+
+def _find_cabin_owner(members: list[AircraftConfiguration], cabin_key: str) -> AircraftConfiguration:
+    best_ac: AircraftConfiguration | None = None
+    best_seats = -1
+    for ac in members:
+        for cabin in ac.cabins:
+            if cabin.cabin_key == cabin_key:
+                seats = cabin.num_seats or 0
+                if seats > best_seats:
+                    best_seats = seats
+                    best_ac = ac
+    if best_ac is None:
+        return _pick_primary(members)
+    return best_ac
+
+
+def _get_or_create_cabin_row(
+    db: Session,
+    owner: AircraftConfiguration,
+    cabin_key: str,
+) -> CabinConfiguration:
+    cabin_row = next((c for c in owner.cabins if c.cabin_key == cabin_key), None)
+    if cabin_row is not None:
+        return cabin_row
+
+    cabin_row = CabinConfiguration(
+        aircraft_id=owner.id,
+        deck=owner.deck,
+        cabin_key=cabin_key,
+        cabin_type=CABIN_TYPE_BY_KEY.get(cabin_key, ""),
+        cabin_class=cabin_key.replace("_", " ").title(),
+        num_seats=0,
+    )
+    owner.cabins.append(cabin_row)
+    db.add(cabin_row)
+    db.flush()
+    return cabin_row
+
+
+def update_aircraft_config(
+    db: Session,
+    svg_id: str,
+    update: AircraftConfigUpdate,
+) -> AircraftSchema:
+    if not update.aircraft and not update.cabins:
+        raise ValueError("At least one aircraft or cabin field must be provided")
+
+    members = _resolve_group_members(db, svg_id)
+    if not members:
+        raise LookupError(f"Aircraft configuration not found: {svg_id}")
+
+    primary = _pick_primary(members)
+    now = datetime.now(timezone.utc)
+
+    for field_key, raw_value in update.aircraft.items():
+        if field_key not in AIRCRAFT_FIELDS:
+            raise ValueError(f"Unknown aircraft field: {field_key}")
+        setattr(primary, field_key, coerce_field_value(field_key, raw_value))
+
+    if update.aircraft:
+        primary.updated_at = now
+
+    for cabin_key, cabin_fields in update.cabins.items():
+        if not cabin_fields:
+            continue
+        owner = _find_cabin_owner(members, cabin_key) if len(members) > 1 else primary
+        cabin_row = _get_or_create_cabin_row(db, owner, cabin_key)
+        for field_key, raw_value in cabin_fields.items():
+            if field_key not in CABIN_FIELDS:
+                raise ValueError(f"Unknown cabin field: {field_key}")
+            setattr(cabin_row, field_key, coerce_field_value(field_key, raw_value))
+
+    db.flush()
+    return get_aircraft_detail(db, svg_id) or _detail_from_entity(primary)

@@ -201,7 +201,8 @@ Base URL: `http://localhost:8000`
 | `GET /api/v1/airlines/summary` | Summary | Per-airline: fleet count, total seats, aircraft type breakdown, avg seat ratings |
 | `GET /api/v1/aircraft` | Fleet detail | Paginated compact list with `source_url`; query params: `airline`, `aircraft_type`, `search` (matches `svg_id`, `aircraft_code_displayed`, `aircraft_type_displayed`, `configuration`) |
 | `GET /api/v1/aircraft/{svg_id}` | Detail drill-down | Full aircraft + cabins |
-| `GET /api/v1/compare?ids=ek-359g,ba-19a&cabin=business` | Compare | `CompareResponse`: `columns` (config metadata per `svg_id`) + `rows` (pivoted feature matrix); 2–4 configs |
+| `GET /api/v1/compare?ids=ek-359g,ba-19a&cabin=business` | Compare | `CompareResponse`: `columns` (config metadata per `svg_id`) + `rows` (pivoted feature matrix with `field_key`, `scope`, raw `values`); 2–4 configs |
+| `PATCH /api/v1/aircraft/{svg_id}` | Compare edit | Partial update of compare-visible aircraft and cabin fields; body `{ aircraft: {...}, cabins: { business: {...} } }`; returns full `AircraftConfiguration` |
 
 **Compare response** (`shared/schemas.py`):
 
@@ -240,7 +241,7 @@ Base URL: `http://localhost:8000`
 
 ### Cross-airline comparison flow
 
-Fleet is the **primary selection surface**; Compare is view-only for side-by-side results.
+Fleet is the **primary selection surface**; Compare shows side-by-side results and supports **column-scoped batch editing** (one config per save).
 
 ```mermaid
 flowchart LR
@@ -273,8 +274,9 @@ flowchart LR
 - Requires `?ids=` with 2–4 comma-separated `svg_id`s (typically navigated from Fleet)
 - `PageHeader` with **Edit selection** link (back to `/fleet?ids=...`) and cabin `Tabs` (First / Business / Premium Economy / Economy)
 - `SectionCard` compare `Table`: rows = features; columns = selected configs
-- Column headers use `CompareResponse.columns` — airline badge, aircraft type, config code, layout (not raw `svg_id`)
-- Highlight differences with `bg-muted/60` and outline `Badge`
+- Column headers use `CompareResponse.columns` — airline badge, aircraft type, config code, layout, **Edit / Save / Cancel** for column edit mode
+- **Column edit mode:** click **Edit** on a column header or any value cell in that column; all compare-visible fields in the column become inputs; **Save** sends one `PATCH` with dirty fields only; **Cancel** or `Escape` discards pending changes
+- Highlight differences with `bg-muted/60` and outline `Badge` (view mode)
 - Empty state (`< 2` ids): `PageHeader` + `EmptyState` directing user to Fleet
 
 **API integration:** `NEXT_PUBLIC_API_URL` env var; server components for initial data where beneficial, client components for interactive filters/compare. Use shadcn `Skeleton` for loading states.
@@ -363,7 +365,7 @@ Track significant architectural choices here. When a decision is reversed, mark 
 | KD-011 | **Raw HTML audit trail** at `data/raw/{svg_id}.html` | Replay and debug parse/normalize without re-scraping; supports future LLM-on-HTML fallback | Fetch-only, no local cache | 2026-06-29 |
 | KD-012 | **Shared schemas** in [`shared/schemas.py`](../shared/schemas.py) imported by pipeline and backend | Single validation contract from extraction through API | Duplicate Pydantic models per layer | 2026-06-29 |
 | KD-013 | **FastAPI compare endpoint returns pre-pivoted rows** (`CompareResponse`: `columns` + `rows`) | Frontend renders table headers from `columns` and feature cells from `rows`; no client-side pivot or per-column detail fetches | Client-side pivot; GraphQL field selection | 2026-06-29 (updated 2026-06-30) |
-| KD-017 | **Fleet-primary cross-airline comparison** — selection on Fleet via `?ids=`; Compare is view-only | Keeps one selection affordance; URL-shared state survives refresh and “Edit selection” round-trips | Config picker on Compare; guided “same aircraft type” wizard | 2026-06-30 |
+| KD-017 | **Fleet-primary cross-airline comparison** — selection on Fleet via `?ids=`; Compare supports per-config column editing with batch save | Keeps one selection affordance; URL-shared state survives refresh; manual corrections via single PATCH per save | Config picker on Compare; per-cell immediate save | 2026-06-30 (updated 2026-06-30) |
 | KD-014 | **Slim API DTOs** — no raw HTML or seat-level data in list/summary endpoints | Keeps fleet and summary views fast; detail endpoint for drill-down | Return full source payload everywhere | 2026-06-29 |
 | KD-015 | **Next.js App Router + shadcn/ui** — compact light theme, TanStack Table | Standardised design system per readme; data-dense tables inspired by Eleken/LCM Hub | MUI, Ant Design, plain Tailwind | 2026-06-29 |
 | KD-016 | **Deploy split:** frontend → Vercel, backend → Railway | Matches readme deployment targets; fits static/SSR frontend + long-running API | Single host; containerise both on Railway | 2026-06-29 |
@@ -374,6 +376,7 @@ Record notable architecture, schema, API, and deployment changes here (newest fi
 
 | Date | Change |
 |------|--------|
+| 2026-06-30 | Compare column edit mode: batch `PATCH /api/v1/aircraft/{svg_id}` for manual config corrections; `CompareRow` extended with `field_key`, `scope`, raw `values`; shared field metadata in `shared/compare_fields.py` — KD-017 |
 | 2026-06-30 | Cross-airline comparison UX: Fleet dynamic airline/type filters, URL-synced `?ids=` selection, removable chips bar; Compare readable column headers + Edit selection; API `CompareResponse` (`columns` + `rows`); aircraft list `search` matches type and layout — KD-013, KD-017 |
 | 2026-06-30 | Database: Neon Postgres support — URL normalization (`postgres://` → psycopg), SSL for `*.neon.tech`, pooled connection pool limits; `.env.example` updated |
 | 2026-06-29 | Pipeline CLI: `--skip-existing` skips extraction for configs already in DB; default re-runs always upsert (no DB write skip on matching `last_updated`); `--force` re-fetches HTML only |

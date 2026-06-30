@@ -295,6 +295,7 @@ export default function FleetPageClient() {
             <Button
               size="sm"
               disabled={selected.size < 2}
+              nativeButton={false}
               render={<Link href={compareUrl} />}
             >
               Compare

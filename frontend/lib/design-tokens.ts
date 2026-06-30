@@ -18,6 +18,9 @@ export const TABLE_CELL_MUTED_CLASS = "py-2 text-muted-foreground";
 
 export const TABLE_LINK_CLASS = "text-primary hover:underline";
 
+export const COMPARE_EDIT_FIELD_CLASS =
+  "h-7 w-full text-xs md:text-xs tabular-nums";
+
 export const CABINS = [
   { key: "first", label: "First" },
   { key: "business", label: "Business" },
