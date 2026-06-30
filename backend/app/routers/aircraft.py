@@ -40,6 +40,7 @@ def list_aircraft(
   airline: str | None = None,
   aircraft_type: str | None = None,
   search: str | None = None,
+  has_premium_economy: bool | None = None,
   offset: int = 0,
   limit: int = 100,
 ) -> tuple[list[AircraftListItem], int]:
@@ -66,6 +67,13 @@ def list_aircraft(
 
   rows = query.all()
   grouped = group_aircraft_rows(rows)
+  if has_premium_economy:
+    grouped = [
+      (gid, members)
+      for gid, members in grouped
+      if (item := merge_list_items(members)).seat_counts
+      and item.seat_counts.premium_economy > 0
+    ]
   total = len(grouped)
   page = grouped[offset : offset + limit]
   items = [merge_list_items(members) for _, members in page]

@@ -80,6 +80,7 @@ export async function getAircraftList(params?: {
   airline?: string | string[];
   aircraft_type?: string | string[];
   search?: string;
+  has_premium_economy?: boolean;
 }): Promise<{ items: AircraftListItem[]; total: number }> {
   const query = new URLSearchParams();
   if (params?.airline) {
@@ -95,6 +96,9 @@ export async function getAircraftList(params?: {
     if (value) query.set("aircraft_type", value);
   }
   if (params?.search) query.set("search", params.search);
+  if (params?.has_premium_economy) {
+    query.set("has_premium_economy", "true");
+  }
   const qs = query.toString();
   return fetchApi(`/api/v1/aircraft${qs ? `?${qs}` : ""}`);
 }

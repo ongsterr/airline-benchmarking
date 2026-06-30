@@ -68,6 +68,7 @@ export default function FleetPageClient() {
     []
   );
   const [search, setSearch] = useState("");
+  const [premiumEconomyOnly, setPremiumEconomyOnly] = useState(false);
   const [exporting, setExporting] = useState(false);
   const idsParam = searchParams.get("ids") || "";
 
@@ -122,6 +123,7 @@ export default function FleetPageClient() {
         aircraft_type:
           selectedAircraftTypes.length > 0 ? selectedAircraftTypes : undefined,
         search: search || undefined,
+        has_premium_economy: premiumEconomyOnly || undefined,
       });
       setItems(data.items);
     } catch {
@@ -129,7 +131,7 @@ export default function FleetPageClient() {
     } finally {
       setLoading(false);
     }
-  }, [selectedAirlines, selectedAircraftTypes, search]);
+  }, [selectedAirlines, selectedAircraftTypes, search, premiumEconomyOnly]);
 
   useEffect(() => {
     load();
@@ -261,6 +263,13 @@ export default function FleetPageClient() {
         selected={selectedAircraftTypes}
         onChange={setSelectedAircraftTypes}
       />
+      <label className="flex h-8 items-center gap-1.5 px-1 text-[11px] text-muted-foreground">
+        <Checkbox
+          checked={premiumEconomyOnly}
+          onCheckedChange={(checked) => setPremiumEconomyOnly(Boolean(checked))}
+        />
+        Premium economy
+      </label>
       <Input
         placeholder="Search config..."
         className={cn(TOOLBAR_CONTROL_CLASS, CONTROL_WIDTH.sm)}

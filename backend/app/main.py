@@ -54,12 +54,19 @@ def list_aircraft(
     airline: str | None = None,
     aircraft_type: str | None = None,
     search: str | None = None,
+    has_premium_economy: bool | None = None,
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     db: Session = Depends(get_db),
 ) -> dict:
     items, total = aircraft_router.list_aircraft(
-        db, airline=airline, aircraft_type=aircraft_type, search=search, offset=offset, limit=limit
+        db,
+        airline=airline,
+        aircraft_type=aircraft_type,
+        search=search,
+        has_premium_economy=has_premium_economy,
+        offset=offset,
+        limit=limit,
     )
     return {"items": items, "total": total}
 
