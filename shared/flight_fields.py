@@ -47,3 +47,32 @@ def format_flight_value(value: Any) -> Any:
             return "—"
         return ", ".join(str(v).strip() for v in value)
     return value
+
+
+def coerce_flight_field_value(field_key: str, value: Any) -> Any:
+    if field_key not in FIELD_TYPES:
+        raise ValueError(f"Unknown flight field: {field_key}")
+
+    field_type = FIELD_TYPES[field_key]
+
+    if value is None or value == "":
+        return None
+
+    if field_type == "string":
+        return str(value)
+
+    if field_type == "int":
+        if isinstance(value, bool):
+            raise ValueError(f"Invalid integer value for {field_key}: {value!r}")
+        return int(value)
+
+    if field_type == "list":
+        if isinstance(value, list):
+            items = [str(v).strip() for v in value if str(v).strip()]
+            return items or None
+        if isinstance(value, str):
+            items = [part.strip() for part in value.split(",") if part.strip()]
+            return items or None
+        raise ValueError(f"Invalid list value for {field_key}: {value!r}")
+
+    raise ValueError(f"Unsupported field type for {field_key}")

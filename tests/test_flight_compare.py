@@ -87,3 +87,17 @@ def test_compare_airlines_returns_flight_rows(
     data = response.json()
     assert len(data["columns"]) == 2
     assert any(row["scope"] == "flight" for row in data["rows"])
+
+
+def test_compare_airlines_includes_source_url_row(
+    client: TestClient, seeded_flight_data
+) -> None:
+    response = client.get("/api/v1/compare/airlines?slugs=ek,ba&cabin=business")
+    assert response.status_code == 200
+    data = response.json()
+    source_rows = [r for r in data["rows"] if r["field_key"] == "source_url"]
+    assert len(source_rows) == 1
+    row = source_rows[0]
+    assert row["feature"] == "Reference URL"
+    assert row["values"]["ek"] == "https://example.com/ek"
+    assert row["values"]["ba"] == "https://example.com/ba"

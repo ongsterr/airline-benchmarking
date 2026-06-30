@@ -227,3 +227,8 @@ class CompareAirlineColumn(BaseModel):
 class CompareAirlineResponse(BaseModel):
     columns: list[CompareAirlineColumn]
     rows: list[CompareRow]
+
+
+class AirlineFlightFeaturesUpdate(BaseModel):
+    fields: dict[str, Any] = Field(default_factory=dict)
+    source_url: str | None = None

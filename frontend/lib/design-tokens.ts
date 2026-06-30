@@ -24,8 +24,12 @@ export const TABLE_LINK_CLASS = "text-primary hover:underline";
 export const COMPARE_EDIT_FIELD_CLASS =
   "h-7 w-full text-xs md:text-xs tabular-nums";
 
+/** Fixed-width airline compare columns; requires `table-fixed` on the table. */
 export const COMPARE_AIRLINE_COLUMN_CLASS =
-  "max-w-48 min-w-32 align-top whitespace-normal break-words";
+  "w-48 max-w-48 min-w-32 align-top text-left !whitespace-normal break-words [overflow-wrap:anywhere]";
+
+export const COMPARE_FEATURE_COLUMN_CLASS =
+  "w-40 min-w-32 align-top text-left !whitespace-normal";
 
 export const CABINS = [
   { key: "first", label: "First" },

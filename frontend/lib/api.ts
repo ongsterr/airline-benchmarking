@@ -143,6 +143,11 @@ export type AircraftConfigUpdate = {
   cabins?: Record<string, Record<string, string | number | boolean | null>>;
 };
 
+export type AirlineFlightFeaturesUpdate = {
+  fields: Record<string, string | number | string[] | null>;
+  source_url?: string | null;
+};
+
 async function fetchApi<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     next: init?.method ? undefined : { revalidate: 60 },
@@ -254,6 +259,26 @@ export async function getAirlineCompare(
   const query = new URLSearchParams({ slugs: slugs.join(",") });
   if (cabin) query.set("cabin", cabin);
   return fetchApi(`/api/v1/compare/airlines?${query}`);
+}
+
+export async function updateAirlineFlightFeatures(
+  slug: string,
+  cabin: string,
+  body: AirlineFlightFeaturesUpdate
+): Promise<void> {
+  const query = new URLSearchParams({ cabin });
+  await fetchApi(
+    `/api/v1/airlines/${encodeURIComponent(slug)}/flight-features?${query}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders(),
+      },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    }
+  );
 }
 
 export async function updateAircraftConfig(

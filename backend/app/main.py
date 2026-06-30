@@ -28,7 +28,9 @@ from shared.schemas import (
     AircraftConfigUpdate,
     AircraftDetailResponse,
     AircraftListItem,
+    AirlineFlightFeaturesUpdate,
     AirlineSummary,
+    CabinFlightFeatures,
     CompareAirlineResponse,
     CompareResponse,
 )
@@ -181,6 +183,31 @@ def compare_airlines(
             detail=f"Maximum {MAX_COMPARE_CONFIGS} airlines for comparison",
         )
     return flight_features_router.compare_airlines(db, airline_slugs, cabin=cabin)
+
+
+@app.patch("/api/v1/airlines/{slug}/flight-features", response_model=CabinFlightFeatures)
+def update_airline_flight_features(
+    slug: str,
+    body: AirlineFlightFeaturesUpdate,
+    cabin: str = Query("business", description="Cabin class key: first, business, premium_economy, economy"),
+    db: Session = Depends(get_db),
+    _: None = Depends(require_edit_auth),
+) -> CabinFlightFeatures:
+    cabin_key = cabin.lower().replace(" ", "_")
+    try:
+        result = flight_features_router.update_airline_cabin_flight_features(
+            db,
+            slug,
+            cabin_key,
+            body,
+            update_source_url="source_url" in body.model_fields_set,
+        )
+        db.commit()
+    except LookupError:
+        raise HTTPException(status_code=404, detail="Airline flight features not found") from None
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return result
 
 
 @app.get("/api/v1/export.csv")
