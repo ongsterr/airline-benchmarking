@@ -2,12 +2,21 @@
 
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
+import {
+  Dialog,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogPopup,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { AirlineBadge } from "@/components/airline-badge";
 import { Badge } from "@/components/ui/badge";
 import { CompareValueCell } from "@/components/compare-column-editor";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/empty-state";
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/page-header";
@@ -30,6 +39,7 @@ import {
 } from "@/lib/design-tokens";
 import { formatCompareValue, valuesEqual } from "@/lib/compare-fields";
 import { cn } from "@/lib/utils";
+import { useEditAuth } from "@/lib/use-edit-auth";
 import {
   CompareConfigColumn,
   CompareRow,
@@ -89,6 +99,7 @@ function ColumnHeader({
   isDirty,
   saving,
   error,
+  canEdit,
   onEdit,
   onSave,
   onCancel,
@@ -98,6 +109,7 @@ function ColumnHeader({
   isDirty: boolean;
   saving: boolean;
   error: string | null;
+  canEdit: boolean;
   onEdit: () => void;
   onSave: () => void;
   onCancel: () => void;
@@ -129,36 +141,37 @@ function ColumnHeader({
         <ExternalLink className="size-2.5 shrink-0 opacity-70" aria-hidden />
       </a>
       <div className="flex flex-wrap items-center gap-1 pt-0.5 pb-2">
-        {isEditing ? (
-          <>
-            <Button
-              size="sm"
-              className="h-6 px-2 text-[10px]"
-              disabled={!isDirty || saving}
-              onClick={onSave}
-            >
-              {saving ? "Saving…" : "Save"}
-            </Button>
+        {canEdit &&
+          (isEditing ? (
+            <>
+              <Button
+                size="sm"
+                className="h-6 px-2 text-[10px]"
+                disabled={!isDirty || saving}
+                onClick={onSave}
+              >
+                {saving ? "Saving…" : "Save"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 px-2 text-[10px]"
+                disabled={saving}
+                onClick={onCancel}
+              >
+                Cancel
+              </Button>
+            </>
+          ) : (
             <Button
               variant="outline"
               size="sm"
               className="h-6 px-2 text-[10px]"
-              disabled={saving}
-              onClick={onCancel}
+              onClick={onEdit}
             >
-              Cancel
+              Edit
             </Button>
-          </>
-        ) : (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-6 px-2 text-[10px]"
-            onClick={onEdit}
-          >
-            Edit
-          </Button>
-        )}
+          ))}
       </div>
       {error && (
         <p className="text-[10px] text-destructive leading-tight">{error}</p>
@@ -169,6 +182,8 @@ function ColumnHeader({
 
 export default function ComparePageClient() {
   const searchParams = useSearchParams();
+  const { isAuthenticated, isLoading: authLoading, login, logout } = useEditAuth();
+  const canEdit = isAuthenticated;
   const idsParam = searchParams.get("ids") || "";
   const ids = idsParam.split(",").filter(Boolean);
   const [cabin, setCabin] = useState<CabinKey>("business");
@@ -179,6 +194,10 @@ export default function ComparePageClient() {
   const [draft, setDraft] = useState<DraftValues>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [signInOpen, setSignInOpen] = useState(false);
+  const [signInPassword, setSignInPassword] = useState("");
+  const [signInError, setSignInError] = useState<string | null>(null);
+  const [signingIn, setSigningIn] = useState(false);
 
   useEffect(() => {
     const idList = idsParam.split(",").filter(Boolean);
@@ -234,6 +253,7 @@ export default function ComparePageClient() {
   }, [editingSvgId]);
 
   const startEditing = (svgId: string) => {
+    if (!canEdit) return;
     setEditingSvgId(svgId);
     setDraft(buildDraftFromRows(rows, svgId));
     setSaveError(null);
@@ -286,6 +306,28 @@ export default function ComparePageClient() {
     }
   };
 
+  const handleSignIn = async (e: FormEvent) => {
+    e.preventDefault();
+    setSigningIn(true);
+    setSignInError(null);
+    try {
+      await login(signInPassword);
+      setSignInOpen(false);
+      setSignInPassword("");
+    } catch (err) {
+      setSignInError(err instanceof Error ? err.message : "Sign in failed");
+    } finally {
+      setSigningIn(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    if (editingSvgId) {
+      cancelEditing();
+    }
+    await logout();
+  };
+
   if (ids.length < 2) {
     return (
       <div className="space-y-6">
@@ -326,6 +368,23 @@ export default function ComparePageClient() {
         description={`Comparing ${ids.length} aircraft configurations.`}
         actions={
           <div className="flex items-center gap-3">
+            {!authLoading &&
+              (canEdit ? (
+                <Button variant="outline" size="sm" onClick={handleSignOut}>
+                  Sign out
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSignInError(null);
+                    setSignInOpen(true);
+                  }}
+                >
+                  Sign in to edit
+                </Button>
+              ))}
             <Button
               variant="outline"
               size="sm"
@@ -363,6 +422,7 @@ export default function ComparePageClient() {
                         isDirty={isDirty}
                         saving={saving}
                         error={isEditing ? saveError : null}
+                        canEdit={canEdit}
                         onEdit={() => startEditing(id)}
                         onSave={handleSave}
                         onCancel={cancelEditing}
@@ -425,6 +485,7 @@ export default function ComparePageClient() {
                                 isEditing
                                 isDirty={isCellDirty}
                                 diff={diff}
+                                canEdit={canEdit}
                                 onStartEdit={() => startEditing(id)}
                                 onChange={(value) =>
                                   setDraft((prev) => ({
@@ -440,6 +501,7 @@ export default function ComparePageClient() {
                                 isEditing={false}
                                 isDirty={false}
                                 diff={diff}
+                                canEdit={canEdit}
                                 onStartEdit={() => startEditing(id)}
                                 onChange={() => {}}
                               />
@@ -455,6 +517,45 @@ export default function ComparePageClient() {
           </TableBody>
         </Table>
       </SectionCard>
+
+      <Dialog open={signInOpen} onOpenChange={setSignInOpen}>
+        <DialogPopup>
+          <form onSubmit={handleSignIn}>
+            <DialogHeader>
+              <DialogTitle>Sign in to edit</DialogTitle>
+              <DialogDescription>
+                Enter the edit password to modify comparison fields.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Input
+                type="password"
+                placeholder="Password"
+                value={signInPassword}
+                onChange={(e) => setSignInPassword(e.target.value)}
+                autoComplete="current-password"
+                autoFocus
+              />
+              {signInError && (
+                <p className="mt-2 text-sm text-destructive">{signInError}</p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setSignInOpen(false)}
+                disabled={signingIn}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={signingIn || !signInPassword}>
+                {signingIn ? "Signing in…" : "Sign in"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogPopup>
+      </Dialog>
     </div>
   );
 }

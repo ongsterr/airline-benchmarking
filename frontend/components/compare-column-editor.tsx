@@ -71,6 +71,7 @@ type CompareValueCellProps = {
   isEditing: boolean;
   isDirty: boolean;
   diff: boolean;
+  canEdit?: boolean;
   onStartEdit: () => void;
   onChange: (value: unknown) => void;
 };
@@ -81,6 +82,7 @@ export function CompareValueCell({
   isEditing,
   isDirty,
   diff,
+  canEdit = false,
   onStartEdit,
   onChange,
 }: CompareValueCellProps) {
@@ -93,6 +95,20 @@ export function CompareValueCell({
   }
 
   const display = formatCompareValue(value);
+
+  if (!canEdit) {
+    return (
+      <span className={cn("block px-1 py-0.5 tabular-nums", diff && "font-medium")}>
+        {diff ? (
+          <Badge variant="outline" className="font-normal">
+            {display}
+          </Badge>
+        ) : (
+          display
+        )}
+      </span>
+    );
+  }
 
   return (
     <button

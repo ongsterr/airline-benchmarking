@@ -1,8 +1,18 @@
 """FastAPI application entry point."""
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Response
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
+
+from backend.app.auth import (
+    create_session_token,
+    edit_auth_enabled,
+    extract_bearer_token,
+    require_edit_auth,
+    validate_session_token,
+    verify_password,
+)
 
 from backend.app.config import settings
 from backend.app.db.session import engine, get_db, init_schema
@@ -21,6 +31,19 @@ from shared.schemas import (
 )
 
 app = FastAPI(title="Flight Benchmarking API", version="0.1.0")
+
+
+class LoginRequest(BaseModel):
+    password: str
+
+
+class LoginResponse(BaseModel):
+    token: str
+
+
+class AuthMeResponse(BaseModel):
+    authenticated: bool
+
 
 origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
 app.add_middleware(
@@ -41,6 +64,28 @@ def on_startup() -> None:
 
 @app.get("/health")
 def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@app.post("/api/v1/auth/login", response_model=LoginResponse)
+def auth_login(body: LoginRequest) -> LoginResponse:
+    if not edit_auth_enabled():
+        raise HTTPException(status_code=503, detail="Edit authentication is not configured")
+    if not verify_password(body.password):
+        raise HTTPException(status_code=401, detail="Invalid password")
+    return LoginResponse(token=create_session_token())
+
+
+@app.get("/api/v1/auth/me", response_model=AuthMeResponse)
+def auth_me(authorization: str | None = Header(None)) -> AuthMeResponse:
+    if not edit_auth_enabled():
+        return AuthMeResponse(authenticated=True)
+    token = extract_bearer_token(authorization)
+    return AuthMeResponse(authenticated=bool(token and validate_session_token(token)))
+
+
+@app.post("/api/v1/auth/logout")
+def auth_logout() -> dict[str, str]:
     return {"status": "ok"}
 
 
@@ -84,6 +129,7 @@ def update_aircraft(
     svg_id: str,
     body: AircraftConfigUpdate,
     db: Session = Depends(get_db),
+    _: None = Depends(require_edit_auth),
 ) -> AircraftConfiguration:
     try:
         detail = aircraft_router.update_aircraft_config(db, svg_id, body)

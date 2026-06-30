@@ -8,6 +8,8 @@ import pytest
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 
+from backend.app.auth import create_session_token, validate_session_token, verify_password
+from backend.app.config import settings
 from backend.app.db.session import SessionLocal, init_schema
 from backend.app.main import app
 from backend.app.models.entities import Base
@@ -23,6 +25,32 @@ from shared.schemas import (
 load_dotenv()
 
 TEST_SVG_ID = "test-patch-aircraft"
+
+
+TEST_PASSWORD = "test-edit-password"
+TEST_SESSION_SECRET = "test-session-secret-key-for-hmac"
+
+
+@pytest.fixture(autouse=True)
+def _reset_edit_auth(monkeypatch):
+    monkeypatch.setattr(settings, "edit_password", "")
+    monkeypatch.setattr(settings, "session_secret", "")
+
+
+@pytest.fixture
+def auth_enabled(monkeypatch):
+    monkeypatch.setattr(settings, "edit_password", TEST_PASSWORD)
+    monkeypatch.setattr(settings, "session_secret", TEST_SESSION_SECRET)
+
+
+def _login(client: TestClient, password: str = TEST_PASSWORD) -> str:
+    response = client.post("/api/v1/auth/login", json={"password": password})
+    assert response.status_code == 200
+    return response.json()["token"]
+
+
+def _auth_headers(token: str) -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.fixture(scope="module")
@@ -89,6 +117,47 @@ def test_coerce_field_value_types() -> None:
 def test_coerce_rejects_unknown_field() -> None:
     with pytest.raises(ValueError, match="Unknown field"):
         coerce_field_value("not_a_field", "x")
+
+
+def test_verify_password(auth_enabled) -> None:
+    assert verify_password(TEST_PASSWORD) is True
+    assert verify_password("wrong") is False
+
+
+def test_session_token_roundtrip(auth_enabled) -> None:
+    token = create_session_token()
+    assert validate_session_token(token) is True
+    assert validate_session_token("invalid.token") is False
+
+
+def test_auth_me_without_password_configured(client) -> None:
+    response = client.get("/api/v1/auth/me")
+    assert response.status_code == 200
+    assert response.json()["authenticated"] is True
+
+
+def test_auth_login_invalid_password(auth_enabled, client) -> None:
+    response = client.post("/api/v1/auth/login", json={"password": "wrong"})
+    assert response.status_code == 401
+
+
+def test_patch_requires_auth_when_enabled(auth_enabled, client, seeded_config) -> None:
+    response = client.patch(
+        f"/api/v1/aircraft/{seeded_config}",
+        json={"aircraft": {"total_seats": 199}},
+    )
+    assert response.status_code == 401
+
+
+def test_patch_with_token_when_auth_enabled(auth_enabled, client, seeded_config) -> None:
+    token = _login(client)
+    response = client.patch(
+        f"/api/v1/aircraft/{seeded_config}",
+        json={"aircraft": {"total_seats": 199}},
+        headers=_auth_headers(token),
+    )
+    assert response.status_code == 200
+    assert response.json()["total_seats"] == 199
 
 
 def test_patch_multiple_aircraft_fields(client, seeded_config) -> None:

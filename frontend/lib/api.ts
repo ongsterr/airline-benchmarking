@@ -1,5 +1,25 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+export const EDIT_AUTH_TOKEN_KEY = "edit_auth_token";
+
+export function getEditAuthToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem(EDIT_AUTH_TOKEN_KEY);
+}
+
+export function setEditAuthToken(token: string): void {
+  sessionStorage.setItem(EDIT_AUTH_TOKEN_KEY, token);
+}
+
+export function clearEditAuthToken(): void {
+  sessionStorage.removeItem(EDIT_AUTH_TOKEN_KEY);
+}
+
+function authHeaders(): HeadersInit {
+  const token = getEditAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export type SeatCounts = {
   first: number;
   business: number;
@@ -103,6 +123,46 @@ export async function getAircraftList(params?: {
   return fetchApi(`/api/v1/aircraft${qs ? `?${qs}` : ""}`);
 }
 
+export async function loginForEdit(password: string): Promise<void> {
+  const res = await fetch(`${API_URL}/api/v1/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password }),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(
+      res.status === 401
+        ? "Invalid password"
+        : `Login failed ${res.status}: ${body || "unknown error"}`
+    );
+  }
+  const data = (await res.json()) as { token: string };
+  setEditAuthToken(data.token);
+}
+
+export async function getEditAuthStatus(): Promise<boolean> {
+  const res = await fetch(`${API_URL}/api/v1/auth/me`, {
+    headers: authHeaders(),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    return false;
+  }
+  const data = (await res.json()) as { authenticated: boolean };
+  return data.authenticated;
+}
+
+export async function logoutForEdit(): Promise<void> {
+  clearEditAuthToken();
+  try {
+    await fetch(`${API_URL}/api/v1/auth/logout`, { method: "POST", cache: "no-store" });
+  } catch {
+    // Best-effort; client token is already cleared.
+  }
+}
+
 export async function getCompare(
   ids: string[],
   cabin?: string
@@ -118,7 +178,10 @@ export async function updateAircraftConfig(
 ): Promise<void> {
   await fetchApi(`/api/v1/aircraft/${encodeURIComponent(svgId)}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
     body: JSON.stringify(body),
     cache: "no-store",
   });

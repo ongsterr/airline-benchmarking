@@ -30,6 +30,8 @@ poetry run python -m pipeline.run --airlines ek,ba,ai
 | `DB_SCHEMA` | `benchmarking` |
 | `CORS_ORIGINS` | `https://<your-vercel-production-domain>` (update after Vercel deploy if needed) |
 | `CORS_ORIGIN_REGEX` | `https://.*\.vercel\.app` |
+| `EDIT_PASSWORD` | Shared password for compare-page editing (required in production) |
+| `SESSION_SECRET` | Random 32+ character key for signing edit session tokens |
 
 5. Deploy and verify:
 
@@ -74,6 +76,8 @@ Preview deployments (`*.vercel.app`) are allowed via `CORS_ORIGIN_REGEX`.
 | `DB_SCHEMA` | Railway | No | Default `benchmarking` |
 | `CORS_ORIGINS` | Railway | Yes (prod) | Comma-separated allowed origins |
 | `CORS_ORIGIN_REGEX` | Railway | Recommended | Regex for Vercel preview URLs |
+| `EDIT_PASSWORD` | Railway | Yes (prod) | Shared password for compare editing |
+| `SESSION_SECRET` | Railway | Yes (prod) | HMAC key for edit session tokens |
 | `NEXT_PUBLIC_API_URL` | Vercel | Yes | Railway API base URL |
 
 Full list: [`.env.example`](../.env.example).
