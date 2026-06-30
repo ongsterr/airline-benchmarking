@@ -117,10 +117,7 @@ def _split_provider_system(text: str | None, vendors: tuple[str, ...]) -> tuple[
             remainder = re.sub(re.escape(vendor), "", text, count=1, flags=re.IGNORECASE).strip()
             system = remainder.split()[0] if remainder else None
             return vendor, system or None
-    parts = text.split()
-    if len(parts) >= 2:
-        return parts[0], " ".join(parts[1:])
-    return parts[0] if parts else None, None
+    return None, None
 
 
 def _parse_wifi_fields(wifi_raw: Any) -> tuple[dict[str, Any] | None, str | None, str | None]:

@@ -357,7 +357,8 @@ export default function FleetPageClient() {
               <TableHead className={cn(TABLE_HEAD_CLASS, "w-8")}>
                 <Checkbox
                   aria-label="Select all visible configurations"
-                  checked={allVisibleSelected || (someVisibleSelected && "indeterminate")}
+                  checked={allVisibleSelected}
+                  indeterminate={someVisibleSelected}
                   onCheckedChange={(checked) => toggleSelectAllVisible(Boolean(checked))}
                   disabled={loading || items.length === 0}
                 />

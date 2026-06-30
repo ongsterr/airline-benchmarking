@@ -10,6 +10,14 @@ from backend.app.models.entities import Airline, AircraftConfiguration, CabinCon
 from pipeline.config import BASE_URL
 from shared.schemas import AircraftConfiguration as AircraftSchema
 
+_VARCHAR_100_MAX = 100
+
+
+def _fit_varchar(value: str | None, max_len: int = _VARCHAR_100_MAX) -> str | None:
+    if value is None or len(value) <= max_len:
+        return value
+    return None
+
 
 def get_existing_svg_ids(db: Session, svg_ids: list[str]) -> set[str]:
     if not svg_ids:
@@ -76,16 +84,20 @@ def upsert_aircraft(
         "description": data.description,
         "total_seats": data.total_seats,
         "seat_counts": seat_counts_dict,
-        "ife_provider": data.ife_provider,
-        "ife_system_name": data.ife_system_name,
+        "ife_provider": _fit_varchar(data.ife_provider),
+        "ife_system_name": _fit_varchar(data.ife_system_name),
         "ife_description": data.ife_description,
-        "wifi_provider": data.wifi_provider,
-        "wifi_system_name": data.wifi_system_name,
+        "wifi_provider": _fit_varchar(data.wifi_provider),
+        "wifi_system_name": _fit_varchar(data.wifi_system_name),
         "wifi": wifi_dict,
         "seat_rating_summary": rating_dict,
         "fetched_at": now,
         "updated_at": now,
     }
+
+    cabin_source = data.cabins
+    if data.deck and data.decks.get(data.deck):
+        cabin_source = data.decks[data.deck].cabins or data.cabins
 
     if existing:
         for key, value in fields.items():
@@ -96,10 +108,6 @@ def upsert_aircraft(
         aircraft = AircraftConfiguration(svg_id=data.svg_id, created_at=now, **fields)
         db.add(aircraft)
         db.flush()
-
-    cabin_source = data.cabins
-    if data.deck and data.decks.get(data.deck):
-        cabin_source = data.decks[data.deck].cabins or data.cabins
 
     for cabin_key, cabin in cabin_source.items():
         db.add(
@@ -123,14 +131,14 @@ def upsert_aircraft(
                 bed_flat_length_inch=cabin.bed_flat_length_inch,
                 screen_size_inch=cabin.screen_size_inch,
                 screen_description=cabin.screen_description,
-                ife_provider=cabin.ife_provider,
-                ife_system_name=cabin.ife_system_name,
+                ife_provider=_fit_varchar(cabin.ife_provider),
+                ife_system_name=_fit_varchar(cabin.ife_system_name),
                 ife=cabin.ife,
-                wifi_provider=cabin.wifi_provider,
-                wifi_system_name=cabin.wifi_system_name,
+                wifi_provider=_fit_varchar(cabin.wifi_provider),
+                wifi_system_name=_fit_varchar(cabin.wifi_system_name),
                 wifi_description=cabin.wifi_description,
                 power_v=cabin.power_v,
-                power_description=cabin.power_description,
+                power_description=_fit_varchar(cabin.power_description),
                 usb_a_availability=cabin.usb_a_availability,
                 usb_a_count=cabin.usb_a_count,
                 usb_c_availability=cabin.usb_c_availability,

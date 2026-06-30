@@ -130,6 +130,7 @@ def run(
                     errors.append(f"{svg_id}:{status}")
                     logger.warning("%s: %s", svg_id, status)
             except Exception as exc:
+                db.rollback()
                 logger.exception("Failed %s", svg_id)
                 errors.append(f"{svg_id}:{exc}")
 
