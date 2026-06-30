@@ -40,6 +40,8 @@ def list_aircraft(
       or_(
         group_id.ilike(f"%{search}%"),
         AircraftConfiguration.aircraft_code_displayed.ilike(f"%{search}%"),
+        AircraftConfiguration.aircraft_type_displayed.ilike(f"%{search}%"),
+        AircraftConfiguration.configuration.ilike(f"%{search}%"),
       )
     )
 

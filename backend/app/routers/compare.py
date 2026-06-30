@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 
 from backend.app.models.entities import AircraftConfiguration, Airline
 from backend.app.routers.aircraft import get_aircraft_detail
-from shared.schemas import CompareRow
+from pipeline.config import BASE_URL
+from shared.schemas import CompareConfigColumn, CompareResponse, CompareRow
 
 
 AIRCRAFT_FIELDS = [
@@ -53,11 +54,24 @@ def _format_value(value: Any) -> Any:
   return value
 
 
+def _config_column(detail) -> CompareConfigColumn:
+  airline_slug = detail.svg_id.split("-", 1)[0]
+  return CompareConfigColumn(
+    svg_id=detail.svg_id,
+    airline_slug=airline_slug,
+    airline_name=detail.airline_name,
+    aircraft_type_displayed=detail.aircraft_type_displayed,
+    aircraft_code_displayed=detail.aircraft_code_displayed,
+    configuration=detail.configuration,
+    source_url=f"{BASE_URL}/{detail.svg_id}",
+  )
+
+
 def compare_aircraft(
   db: Session,
   svg_ids: list[str],
   cabin: str | None = None,
-) -> list[CompareRow]:
+) -> CompareResponse:
   configs = []
   for svg_id in svg_ids:
     detail = get_aircraft_detail(db, svg_id)
@@ -65,7 +79,7 @@ def compare_aircraft(
       configs.append(detail)
 
   if not configs:
-    return []
+    return CompareResponse(columns=[], rows=[])
 
   rows: list[CompareRow] = []
 
@@ -93,4 +107,7 @@ def compare_aircraft(
       )
     )
 
-  return rows
+  return CompareResponse(
+    columns=[_config_column(c) for c in configs],
+    rows=rows,
+  )

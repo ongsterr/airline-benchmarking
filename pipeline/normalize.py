@@ -15,7 +15,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from pipeline.clean import clean_raw_for_llm
 from pipeline.deck import deck_from_svg_id, is_deck_page, parent_svg_id_from_svg_id
 from pipeline.prompts.aircraft_hardware_prompt import build_aircraft_hardware_prompt
-from pipeline.validate import tolerant_validate_aircraft
+from pipeline.validate import sanitize_empty_values, tolerant_validate_aircraft
 from shared.schemas import AircraftConfiguration
 
 logger = logging.getLogger(__name__)
@@ -324,37 +324,39 @@ def normalize_deterministic(raw: dict[str, Any], airline_slug: str, airline_name
             "cabins": cabins_out,
         }
 
-    return {
-        "svg_id": svg_id,
-        "airline_iata": airline_iata,
-        "airline_name": scoped.get("airline_name") or airline_name,
-        "iata_code": scoped.get("iata_code"),
-        "aircraft_type": scoped.get("aircraft_type"),
-        "aircraft_type_displayed": scoped.get("aircraft_type_displayed"),
-        "aircraft_code_displayed": scoped.get("aircraft_code_displayed"),
-        "manufacturer": scoped.get("manufacturer") or scoped.get("aircraft_manufacturer"),
-        "haul_type": scoped.get("haul_type"),
-        "lifecycle": scoped.get("lifecycle", "active"),
-        "is_dual_deck": is_dual_deck,
-        "deck": deck,
-        "parent_svg_id": parent_id,
-        "deck_state": deck_state,
-        "fleet_count": scoped.get("fleet_count"),
-        "last_updated": last_updated,
-        "configuration": scoped.get("configuration"),
-        "description": scoped.get("description"),
-        "total_seats": scoped.get("total_seats") or seat_counts.get("total"),
-        "seat_counts": seat_counts,
-        "ife_provider": scoped.get("ife_provider") or ife_provider,
-        "ife_system_name": scoped.get("ife_system_name") or ife_system,
-        "ife_description": scoped.get("ife_description"),
-        "wifi_provider": scoped.get("wifi_provider") or wifi_provider,
-        "wifi_system_name": scoped.get("wifi_system_name") or wifi_system,
-        "wifi": wifi,
-        "seat_rating_summary": seat_rating,
-        "decks": decks_out,
-        "cabins": cabins_out,
-    }
+    return sanitize_empty_values(
+        {
+            "svg_id": svg_id,
+            "airline_iata": airline_iata,
+            "airline_name": scoped.get("airline_name") or airline_name,
+            "iata_code": scoped.get("iata_code"),
+            "aircraft_type": scoped.get("aircraft_type"),
+            "aircraft_type_displayed": scoped.get("aircraft_type_displayed"),
+            "aircraft_code_displayed": scoped.get("aircraft_code_displayed"),
+            "manufacturer": scoped.get("manufacturer") or scoped.get("aircraft_manufacturer"),
+            "haul_type": scoped.get("haul_type"),
+            "lifecycle": scoped.get("lifecycle", "active"),
+            "is_dual_deck": is_dual_deck,
+            "deck": deck,
+            "parent_svg_id": parent_id,
+            "deck_state": deck_state,
+            "fleet_count": scoped.get("fleet_count"),
+            "last_updated": last_updated,
+            "configuration": scoped.get("configuration"),
+            "description": scoped.get("description"),
+            "total_seats": scoped.get("total_seats") or seat_counts.get("total"),
+            "seat_counts": seat_counts,
+            "ife_provider": scoped.get("ife_provider") or ife_provider,
+            "ife_system_name": scoped.get("ife_system_name") or ife_system,
+            "ife_description": scoped.get("ife_description"),
+            "wifi_provider": scoped.get("wifi_provider") or wifi_provider,
+            "wifi_system_name": scoped.get("wifi_system_name") or wifi_system,
+            "wifi": wifi,
+            "seat_rating_summary": seat_rating,
+            "decks": decks_out,
+            "cabins": cabins_out,
+        }
+    )
 
 
 def _coerce_wifi_dict(value: Any) -> dict[str, Any] | None:

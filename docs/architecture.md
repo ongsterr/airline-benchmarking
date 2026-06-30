@@ -199,14 +199,21 @@ Base URL: `http://localhost:8000`
 |----------|------|---------|
 | `GET /health` | — | Health check |
 | `GET /api/v1/airlines/summary` | Summary | Per-airline: fleet count, total seats, aircraft type breakdown, avg seat ratings |
-| `GET /api/v1/aircraft` | Fleet detail | Paginated compact list with `source_url`; query params: `airline`, `aircraft_type`, `search` |
+| `GET /api/v1/aircraft` | Fleet detail | Paginated compact list with `source_url`; query params: `airline`, `aircraft_type`, `search` (matches `svg_id`, `aircraft_code_displayed`, `aircraft_type_displayed`, `configuration`) |
 | `GET /api/v1/aircraft/{svg_id}` | Detail drill-down | Full aircraft + cabins |
-| `GET /api/v1/compare?ids=ek-359g,ba-77w&cabin=business` | Compare | Pivoted feature rows for selected configs |
+| `GET /api/v1/compare?ids=ek-359g,ba-19a&cabin=business` | Compare | `CompareResponse`: `columns` (config metadata per `svg_id`) + `rows` (pivoted feature matrix); 2–4 configs |
+
+**Compare response** (`shared/schemas.py`):
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `columns` | `CompareConfigColumn[]` | Per-config header metadata: `svg_id`, `airline_slug`, `airline_name`, `aircraft_type_displayed`, `aircraft_code_displayed`, `configuration` |
+| `rows` | `CompareRow[]` | Pivoted features: `feature`, `category`, `values` keyed by `svg_id` |
 
 **Performance choices:**
 
 - Summary endpoint uses SQL aggregations (not N+1)
-- Compare endpoint returns a pre-pivoted structure (feature name → values per column) to avoid client-side reshaping
+- Compare endpoint returns a pre-pivoted structure (`rows`: feature name → values per column) plus `columns` metadata for readable table headers — no client-side reshape or extra detail fetches
 - Response schemas are slim DTOs (no raw HTML, no seat-level data in list views)
 - CORS configured for local dev + Vercel origin
 
@@ -231,19 +238,44 @@ Base URL: `http://localhost:8000`
 - Columns: Airline, Configs, Aircraft Types, Last Updated
 - Click airline → navigate to View 2 with airline filter pre-applied
 
+### Cross-airline comparison flow
+
+Fleet is the **primary selection surface**; Compare is view-only for side-by-side results.
+
+```mermaid
+flowchart LR
+    Summary["Summary /"] -->|"optional ?airline="| Fleet["Fleet /fleet"]
+    Fleet -->|"checkbox 2-4 configs"| ChipsBar["Selected chips bar"]
+    ChipsBar -->|"Compare → ?ids="| Compare["Compare /compare"]
+    Compare -->|"Edit selection"| Fleet
+```
+
+- **URL state:** selection is synced to `?ids=` on Fleet and Compare (e.g. `/fleet?ids=ek-359g,ba-19a&airline=all`)
+- **Cross-airline discovery:** use airline filter **All airlines** plus aircraft type filter or search (e.g. `A380`) to find like-for-like configs across carriers
+- **Limits:** 2–4 configs (enforced in Fleet UI and compare API)
+
 ### View 2 — Fleet detail (`/fleet`)
 
-- `PageHeader` with `TableToolbar` filters (airline, search) in actions slot
-- `SectionCard` with compact `Table` of all aircraft configurations
+- `PageHeader` with `TableToolbar` filters in actions slot:
+  - **Airline** — dynamic list from `GET /api/v1/airlines/summary` (includes “All airlines”)
+  - **Aircraft type** — union of `aircraft_types` from summaries; passed as `aircraft_type` query param
+  - **Search** — free text against config id, code, type, and seat layout
+- Hint when a single airline is filtered: prompt user to switch to “All airlines” for cross-carrier comparison
+- `SectionCard` with compact `Table` of aircraft configurations
 - Columns: Airline, Aircraft Type, Config ID, Seat Layout, Seats, Ref URL (link to AeroLOPA `source_url`)
-- `Checkbox` row selection → sticky compare bar with shadcn `Button`
+- `Checkbox` row selection (max 4) → **selected configs bar** above the table:
+  - Removable chips: airline badge + aircraft type + config code
+  - Counter (`N of 4 selected`) and **Compare** button (enabled at 2+)
+  - Chip metadata cached in client state so labels persist when filters hide selected rows
 
 ### View 3 — Compare (`/compare`)
 
-- `PageHeader` with cabin `Tabs` in actions slot (First / Business / Premium Economy / Economy)
+- Requires `?ids=` with 2–4 comma-separated `svg_id`s (typically navigated from Fleet)
+- `PageHeader` with **Edit selection** link (back to `/fleet?ids=...`) and cabin `Tabs` (First / Business / Premium Economy / Economy)
 - `SectionCard` compare `Table`: rows = features; columns = selected configs
+- Column headers use `CompareResponse.columns` — airline badge, aircraft type, config code, layout (not raw `svg_id`)
 - Highlight differences with `bg-muted/60` and outline `Badge`
-- Empty state (`< 2` configs): `PageHeader` + `EmptyState` inside standard page structure
+- Empty state (`< 2` ids): `PageHeader` + `EmptyState` directing user to Fleet
 
 **API integration:** `NEXT_PUBLIC_API_URL` env var; server components for initial data where beneficial, client components for interactive filters/compare. Use shadcn `Skeleton` for loading states.
 
@@ -328,7 +360,8 @@ Track significant architectural choices here. When a decision is reversed, mark 
 | KD-010 | **Manual CLI pipeline** (`python -m pipeline.run`) for Phase 1 | No scheduler/queue infra until refresh cadence is defined | Scheduled job (Railway cron, Airflow) in Phase 1 | 2026-06-29 |
 | KD-011 | **Raw HTML audit trail** at `data/raw/{svg_id}.html` | Replay and debug parse/normalize without re-scraping; supports future LLM-on-HTML fallback | Fetch-only, no local cache | 2026-06-29 |
 | KD-012 | **Shared schemas** in [`shared/schemas.py`](../shared/schemas.py) imported by pipeline and backend | Single validation contract from extraction through API | Duplicate Pydantic models per layer | 2026-06-29 |
-| KD-013 | **FastAPI compare endpoint returns pre-pivoted rows** (feature → values per config) | Frontend renders a table directly; avoids client-side reshape for 2–4 columns | Client-side pivot; GraphQL field selection | 2026-06-29 |
+| KD-013 | **FastAPI compare endpoint returns pre-pivoted rows** (`CompareResponse`: `columns` + `rows`) | Frontend renders table headers from `columns` and feature cells from `rows`; no client-side pivot or per-column detail fetches | Client-side pivot; GraphQL field selection | 2026-06-29 (updated 2026-06-30) |
+| KD-017 | **Fleet-primary cross-airline comparison** — selection on Fleet via `?ids=`; Compare is view-only | Keeps one selection affordance; URL-shared state survives refresh and “Edit selection” round-trips | Config picker on Compare; guided “same aircraft type” wizard | 2026-06-30 |
 | KD-014 | **Slim API DTOs** — no raw HTML or seat-level data in list/summary endpoints | Keeps fleet and summary views fast; detail endpoint for drill-down | Return full source payload everywhere | 2026-06-29 |
 | KD-015 | **Next.js App Router + shadcn/ui** — compact light theme, TanStack Table | Standardised design system per readme; data-dense tables inspired by Eleken/LCM Hub | MUI, Ant Design, plain Tailwind | 2026-06-29 |
 | KD-016 | **Deploy split:** frontend → Vercel, backend → Railway | Matches readme deployment targets; fits static/SSR frontend + long-running API | Single host; containerise both on Railway | 2026-06-29 |
@@ -339,6 +372,7 @@ Record notable architecture, schema, API, and deployment changes here (newest fi
 
 | Date | Change |
 |------|--------|
+| 2026-06-30 | Cross-airline comparison UX: Fleet dynamic airline/type filters, URL-synced `?ids=` selection, removable chips bar; Compare readable column headers + Edit selection; API `CompareResponse` (`columns` + `rows`); aircraft list `search` matches type and layout — KD-013, KD-017 |
 | 2026-06-30 | Database: Neon Postgres support — URL normalization (`postgres://` → psycopg), SSL for `*.neon.tech`, pooled connection pool limits; `.env.example` updated |
 | 2026-06-29 | Pipeline CLI: `--skip-existing` skips extraction for configs already in DB; default re-runs always upsert (no DB write skip on matching `last_updated`); `--force` re-fetches HTML only |
 | 2026-06-29 | Pipeline data quality: enriched deterministic normalize, LLM deep-merge over base, `data/parsed/` artifacts, clearer updated/unchanged logging, `--force` re-writes DB |

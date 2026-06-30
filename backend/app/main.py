@@ -10,7 +10,12 @@ from backend.app.models.entities import Base
 from backend.app.routers import aircraft as aircraft_router
 from backend.app.routers import airlines as airlines_router
 from backend.app.routers import compare as compare_router
-from shared.schemas import AircraftConfiguration, AircraftListItem, AirlineSummary, CompareRow
+from shared.schemas import (
+    AircraftConfiguration,
+    AircraftListItem,
+    AirlineSummary,
+    CompareResponse,
+)
 
 app = FastAPI(title="Flight Benchmarking API", version="0.1.0")
 
@@ -63,12 +68,12 @@ def aircraft_detail(svg_id: str, db: Session = Depends(get_db)) -> AircraftConfi
     return detail
 
 
-@app.get("/api/v1/compare", response_model=list[CompareRow])
+@app.get("/api/v1/compare", response_model=CompareResponse)
 def compare(
     ids: str = Query(..., description="Comma-separated svg_ids"),
     cabin: str | None = Query(None, description="Cabin class key: first, business, premium_economy, economy"),
     db: Session = Depends(get_db),
-) -> list[CompareRow]:
+) -> CompareResponse:
     svg_ids = [s.strip() for s in ids.split(",") if s.strip()]
     if len(svg_ids) < 2:
         raise HTTPException(status_code=400, detail="Provide at least 2 aircraft ids to compare")

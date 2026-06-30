@@ -143,3 +143,18 @@ class CompareRow(BaseModel):
     feature: str
     category: str
     values: dict[str, Any]
+
+
+class CompareConfigColumn(BaseModel):
+    svg_id: str
+    airline_slug: str
+    airline_name: str
+    aircraft_type_displayed: str | None = None
+    aircraft_code_displayed: str | None = None
+    configuration: str | None = None
+    source_url: str
+
+
+class CompareResponse(BaseModel):
+    columns: list[CompareConfigColumn]
+    rows: list[CompareRow]

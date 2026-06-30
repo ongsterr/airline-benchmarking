@@ -22,6 +22,17 @@ _NESTED_MODELS: dict[str, type[BaseModel]] = {
 }
 
 
+def sanitize_empty_values(value: Any) -> Any:
+    """Coerce AeroLOPA empty strings to None before Pydantic validation."""
+    if value == "":
+        return None
+    if isinstance(value, dict):
+        return {k: sanitize_empty_values(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [sanitize_empty_values(v) for v in value]
+    return value
+
+
 def _validate_field(model: type[BaseModel], field_name: str, value: Any) -> Any:
     annotation = model.model_fields[field_name].annotation
     return TypeAdapter(annotation).validate_python(value)
@@ -159,6 +170,8 @@ def tolerant_validate_aircraft(
     base: dict[str, Any],
 ) -> tuple[AircraftConfiguration, list[str]]:
     """Validate merged dict field-by-field; invalid fields fall back to base or are dropped."""
+    merged = sanitize_empty_values(merged)
+    base = sanitize_empty_values(base)
     dropped_fields: list[str] = []
     cleaned: dict[str, Any] = dict(base)
 
@@ -194,7 +207,11 @@ def tolerant_validate_aircraft(
             continue
 
         try:
-            cleaned[field_name] = _validate_field(AircraftConfiguration, field_name, value)
+            cleaned[field_name] = _validate_field(
+                AircraftConfiguration,
+                field_name,
+                sanitize_empty_values(value),
+            )
         except ValidationError:
             dropped_fields.append(field_name)
             if field_name in base:

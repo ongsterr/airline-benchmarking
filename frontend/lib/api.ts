@@ -38,6 +38,21 @@ export type CompareRow = {
   values: Record<string, string | number | boolean | null>;
 };
 
+export type CompareConfigColumn = {
+  svg_id: string;
+  airline_slug: string;
+  airline_name: string;
+  aircraft_type_displayed: string | null;
+  aircraft_code_displayed: string | null;
+  configuration: string | null;
+  source_url: string;
+};
+
+export type CompareResponse = {
+  columns: CompareConfigColumn[];
+  rows: CompareRow[];
+};
+
 async function fetchApi<T>(path: string): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, { next: { revalidate: 60 } });
   if (!res.ok) {
@@ -66,7 +81,7 @@ export async function getAircraftList(params?: {
 export async function getCompare(
   ids: string[],
   cabin?: string
-): Promise<CompareRow[]> {
+): Promise<CompareResponse> {
   const query = new URLSearchParams({ ids: ids.join(",") });
   if (cabin) query.set("cabin", cabin);
   return fetchApi(`/api/v1/compare?${query}`);
