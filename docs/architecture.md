@@ -1,0 +1,344 @@
+# Flight Benchmarking — Architecture
+
+## Overview
+
+Monolithic repo with three layers:
+
+1. **Pipeline** (`pipeline/`) — discovers and extracts aircraft hardware features from [AeroLOPA](https://www.aerolopa.com/) for EK, BA, AI via embedded JSON + LLM normalization
+2. **Backend** (`backend/`) — FastAPI REST API serving aggregated data from Postgres
+3. **Frontend** (`frontend/`) — Next.js + shadcn/ui comparison dashboard
+
+**In scope (Phase 1):** Aircraft hardware features only (pipeline + DB + API + 3 UI views). Cabin-class flight features are deferred.
+
+See [Key design decisions](#key-design-decisions) for rationale behind major choices. Update that section and the [Change log](#change-log) when scope, stack, or architecture changes.
+
+## Monorepo layout
+
+```
+flight-benchmarking/
+├── backend/
+│   ├── app/
+│   │   ├── main.py              # FastAPI entry
+│   │   ├── config.py            # env, model swap
+│   │   ├── db/                  # SQLAlchemy engine, session
+│   │   ├── models/              # ORM models
+│   │   ├── schemas/             # Pydantic response DTOs
+│   │   └── routers/             # airlines, aircraft, compare
+│   └── alembic/                 # migrations
+├── pipeline/
+│   ├── config.py                # target airlines, rate limits
+│   ├── discover.py              # list config URLs per airline
+│   ├── fetch.py                 # HTTP fetch + HTML storage
+│   ├── parse_json.py            # extract embedded Next.js aircraft JSON
+│   ├── normalize.py             # deterministic base + LLM deep-merge
+│   ├── artifacts.py             # save data/parsed JSON artifacts
+│   ├── load.py                  # upsert into Postgres
+│   └── run.py                   # CLI orchestrator
+├── frontend/                    # Next.js 14+ App Router + shadcn/ui
+│   ├── app/
+│   │   ├── page.tsx             # View 1: airline summary
+│   │   ├── fleet/page.tsx       # View 2: all configs table
+│   │   └── compare/page.tsx     # View 3: side-by-side comparison
+│   ├── components/
+│   │   ├── ui/                  # shadcn primitives (table, card, badge, select, etc.)
+│   │   └── ...                  # app-level composites (DataTable, StatCard, CompareGrid)
+│   ├── lib/
+│   │   ├── api.ts               # typed fetch client
+│   │   └── utils.ts             # cn() helper (shadcn default)
+│   └── components.json          # shadcn config
+├── docs/
+│   └── architecture.md
+├── shared/
+│   └── schemas.py               # Pydantic models mirroring output.py (imported by pipeline + backend)
+├── output.py                    # kept as reference example
+├── pyproject.toml               # Poetry deps for backend + pipeline
+├── .env.example
+└── readme.md
+```
+
+Deploy targets: `frontend/` → Vercel, `backend/` → Railway (each with its own config file).
+
+## Data flow
+
+```mermaid
+flowchart LR
+    subgraph pipeline [Pipeline CLI]
+        D[discover] --> F[fetch HTML]
+        F --> P[parse embedded JSON]
+        P --> N[LLM normalize]
+        N --> L[upsert Postgres]
+    end
+    subgraph storage [Postgres emirates.benchmarking]
+        T1[airlines]
+        T2[aircraft_configurations]
+        T3[cabin_configurations]
+    end
+    subgraph serve [FastAPI]
+        API[routers]
+    end
+    subgraph ui [Next.js]
+        V1[Summary]
+        V2[Fleet detail]
+        V3[Compare]
+    end
+    L --> T1 & T2 & T3
+    T1 & T2 & T3 --> API
+    API --> V1 & V2 & V3
+```
+
+**Incremental updates:** Store `last_updated` (from AeroLOPA JSON) and `fetched_at` per config. By default, re-runs extract and upsert all discovered configs (refreshing existing DB rows). Use `--skip-existing` to skip fetch/parse/LLM for configs already in the database and only backfill net-new `svg_id`s.
+
+## Data pipeline
+
+| Stage | Module | Description |
+|-------|--------|-------------|
+| Discover | `pipeline/discover.py` | List config URLs per airline from `/ek`, `/ba`, `/ai` |
+| Fetch | `pipeline/fetch.py` | Download HTML to `data/raw/{svg_id}.html` |
+| Parse | `pipeline/parse_json.py` | Extract embedded Next.js aircraft JSON |
+| Normalize | `pipeline/normalize.py` | Deterministic base + Langchain/Gemini deep-merge |
+| Load | `pipeline/load.py` | Upsert into `benchmarking.*` tables |
+| Artifacts | `pipeline/artifacts.py` | Save raw/normalized JSON to `data/parsed/` |
+
+### Pipeline troubleshooting
+
+**Run summary counts:**
+
+| Log term | Meaning |
+|----------|---------|
+| `updated` | Config extracted and upserted to Postgres |
+| `skipped (already loaded)` | Config already in DB and skipped via `--skip-existing` |
+| `errors` | Fetch, parse, or unhandled failure |
+
+Per-config lines look like: `INFO ek-359g: updated (source=llm)` or `INFO ek-359u: skipped (already loaded)`.
+
+**Flags:**
+
+- `--limit N` — process only the first N discovered configs (useful for dev)
+- `--skip-existing` — skip fetch/parse/normalize for configs already in the database; only process net-new `svg_id`s
+- `--force` — re-fetch HTML from AeroLOPA (bypass `data/raw/` cache); overrides `--skip-existing`
+
+**Artifact directories:**
+
+| Path | Content |
+|------|---------|
+| `data/raw/{svg_id}.html` | Cached AeroLOPA HTML |
+| `data/parsed/{svg_id}.raw.json` | Extracted embedded aircraft JSON (full parse, includes per-seat map) |
+| `data/parsed/{svg_id}.cleaned.json` | Pre-LLM payload: seats/URLs/assets stripped via `pipeline/clean.py` |
+| `data/parsed/{svg_id}.normalized.json` | Final schema after normalize (deterministic + optional LLM merge) |
+| `data/parsed/{svg_id}.llm.json` | Raw parsed JSON from LLM (when source=llm) |
+| `data/parsed/{svg_id}.meta.json` | `{ "source", "normalized_at", "last_updated", "dropped_fields" }` |
+
+If DB rows look sparse, inspect `data/parsed/*.normalized.json` first. Normalization builds a deterministic base from raw JSON, then deep-merges LLM output (non-null overlay values only). Field-level tolerant validation drops invalid LLM fields back to the deterministic base rather than failing the whole record. If LLM fails entirely, deterministic output is used.
+
+### Discovery (`pipeline/discover.py`)
+
+- For each slug (`ek`, `ba`, `ai`): `GET https://www.aerolopa.com/{slug}`
+- Extract config URLs from `href="/{slug}-..."` links; for dual-deck types, also parse `aircraft_code` from embedded RSC JSON to catch `-m`/`-u` deck pages
+- Persist discovered URLs in `pipeline_runs` / `source_pages` tracking table
+
+### Fetch (`pipeline/fetch.py`)
+
+- Polite HTTP client (User-Agent, small delay between requests)
+- Save raw HTML to `data/raw/{svg_id}.html` for audit/replay
+- Record HTTP status and fetch timestamp
+
+### JSON parse (`pipeline/parse_json.py`)
+
+- Extract `self.__next_f.push(...)` payloads from HTML
+- Collect candidate aircraft objects and return the richest (most cabin fields)
+- Return structured dict; fail gracefully with logged error if parse fails
+
+### LLM normalize (`pipeline/normalize.py`, `pipeline/clean.py`, `pipeline/prompts/`, `pipeline/validate.py`)
+
+- Build deterministic base from **full** raw JSON (IFE/WiFi split, USB, recline, seat ratings from `seats` map, etc.)
+- **Pre-LLM clean** (`pipeline/clean.py`): strip `seats`, image URLs, and asset noise before prompt injection (~168KB → ~3KB for typical configs)
+- EPD-style structured prompt in `pipeline/prompts/aircraft_hardware_prompt.py` (role, context, field definitions, constraints, full `ek-359g` example from `output.py`)
+- **Typed output schema** in `pipeline/prompts/schema_format.py` — generated from `shared/schemas.py` Pydantic models (EPD-style `<string>`, `<integer>`, nested objects)
+- Langchain/Gemini deep-merges over base — LLM cannot wipe deterministic fields with nulls
+- Field-level tolerant validation in `pipeline/validate.py` — invalid LLM fields fall back to base values; `dropped_fields` recorded in meta
+- Configurable model via env (`LLM_MODEL=gemini-2.5-pro`)
+
+### Load (`pipeline/load.py`)
+
+- Upsert airlines, aircraft configurations, cabin rows
+- Use `svg_id` as natural key (e.g. `ek-359g`)
+
+### CLI (`pipeline/run.py`)
+
+```bash
+# From repo root (with .env configured)
+poetry install
+python -m pipeline.run --airlines ek,ba,ai
+python -m pipeline.run --airlines ek --limit 5 --skip-existing   # backfill only net-new configs
+python -m pipeline.run --airlines ek --limit 5 --force           # dev: re-fetch from AeroLOPA
+```
+
+## Database schema
+
+Schema: `benchmarking` in the `emirates` database.
+
+| Table | Purpose | Key columns |
+|-------|---------|-------------|
+| `airlines` | Airline metadata | `id` UUID PK, `slug`, `iata_code`, `name` |
+| `aircraft_configurations` | Aircraft-level features | `id` UUID PK, `svg_id` unique, `airline_id` UUID FK, `source_url`, `aircraft_type`, `configuration`, `seat_counts` JSONB, `wifi` JSONB, `ife_*`, `last_updated`, `fetched_at` |
+| `cabin_configurations` | Cabin-level features | `id` UUID PK, `aircraft_id` UUID FK, `cabin_key`, pitch/width/recline, USB, power, `layout`, seat fields |
+| `pipeline_runs` | Audit trail | `id` UUID PK, `started_at`, `airlines`, `configs_discovered`, `configs_updated` |
+
+- All primary keys and foreign keys use UUID (`uuid4` on insert)
+- `source_url` stores the AeroLOPA page URL (`https://www.aerolopa.com/{svg_id}`), set at pipeline load
+- `svg_id` remains the business/natural key for API routes and compare UI
+- Schema reset after UUID migration: `poetry run python scripts/reset_schema.py` then re-run pipeline
+
+## API
+
+**Dependencies:** FastAPI, SQLAlchemy 2.x, asyncpg/psycopg, Pydantic v2, uvicorn
+
+Base URL: `http://localhost:8000`
+
+| Endpoint | View | Returns |
+|----------|------|---------|
+| `GET /health` | — | Health check |
+| `GET /api/v1/airlines/summary` | Summary | Per-airline: fleet count, total seats, aircraft type breakdown, avg seat ratings |
+| `GET /api/v1/aircraft` | Fleet detail | Paginated compact list with `source_url`; query params: `airline`, `aircraft_type`, `search` |
+| `GET /api/v1/aircraft/{svg_id}` | Detail drill-down | Full aircraft + cabins |
+| `GET /api/v1/compare?ids=ek-359g,ba-77w&cabin=business` | Compare | Pivoted feature rows for selected configs |
+
+**Performance choices:**
+
+- Summary endpoint uses SQL aggregations (not N+1)
+- Compare endpoint returns a pre-pivoted structure (feature name → values per column) to avoid client-side reshaping
+- Response schemas are slim DTOs (no raw HTML, no seat-level data in list views)
+- CORS configured for local dev + Vercel origin
+
+## Frontend
+
+**Stack:** Next.js App Router, TypeScript, Tailwind CSS (via shadcn), shadcn/ui component library, TanStack Table for sortable/filterable data grids.
+
+**Design system (shadcn/ui):**
+
+- Initialise shadcn in `frontend/` (`npx shadcn@latest init`) with the default **light** theme
+- Customise CSS variables in `globals.css` for a compact, data-dense feel: tighter `--spacing`, smaller default font size, reduced table row padding
+- Core shadcn components: `table`, `card`, `badge`, `button`, `select`, `input`, `checkbox`, `tabs`, `separator`, `skeleton`, `tooltip`
+- App-level composites: `DataTable` (TanStack Table + shadcn `Table`), `StatCard` (`Card`), `AirlineBadge` (`Badge`), `CabinSelector` (`Select`/`Tabs`), `CompareGrid`
+- Consistent layout shell: top nav with `Tabs` linking the three views; shared page header pattern using `Card`
+
+### View 1 — Airline summary (`/`)
+
+- `Card` grid of airline stats + shadcn `Table` with one row per airline (EK, BA, AI)
+- Columns: Airline, Configs, Aircraft Types, Last Updated (Title Case headers)
+- Click row → navigate to View 2 with airline filter pre-applied
+
+### View 2 — Fleet detail (`/fleet`)
+
+- Compact shadcn `DataTable` of all aircraft configurations across airlines
+- Columns: Airline, Aircraft Type, Config ID, Seat Layout, Seats, Ref URL (link to AeroLOPA `source_url`)
+- Filters: `Select` for airline/aircraft family; `Input` for config code search; `Checkbox` for row selection → comparison basket
+- Selected rows shown in a sticky `Card` footer with "Compare" `Button`
+
+### View 3 — Compare (`/compare`)
+
+- User selects 2–4 aircraft configs (from View 2 basket or URL params)
+- `Tabs` or `Select` for cabin class (First / Business / Premium Economy / Economy)
+- shadcn `Table`: rows = features (aircraft-level block, then cabin-level block); columns = selected configs
+- Highlight differences with conditional `Badge` or subtle background via `cn()` utility
+
+**API integration:** `NEXT_PUBLIC_API_URL` env var; server components for initial data where beneficial, client components for interactive filters/compare. Use shadcn `Skeleton` for loading states.
+
+## Local development
+
+```bash
+# 1. Environment
+cp .env.example .env
+# Edit DATABASE_URL, GOOGLE_API_KEY
+
+# 2. Python deps + migrations
+poetry install
+cd backend && poetry run alembic upgrade head
+
+# 3. Run pipeline (populates DB)
+python -m pipeline.run --airlines ek,ba,ai
+
+# 4. Backend
+cd backend && poetry run uvicorn app.main:app --reload --port 8000
+
+# 5. Frontend
+cd frontend && npm install && npm run dev
+```
+
+## Deployment
+
+| Component | Target | Config |
+|-----------|--------|--------|
+| Frontend | Vercel | `frontend/vercel.json`, root directory `frontend`, set `NEXT_PUBLIC_API_URL` |
+| Backend | Railway | `backend/railway.toml` or `Procfile`, `uvicorn app.main:app`, set `DATABASE_URL`, `CORS_ORIGINS` |
+
+Secrets documented in [`.env.example`](../.env.example): `DATABASE_URL`, `GOOGLE_API_KEY`, `LLM_MODEL`, `NEXT_PUBLIC_API_URL`.
+
+## Environment variables
+
+See [`.env.example`](../.env.example).
+
+## Implementation status
+
+| Area | Status |
+|------|--------|
+| Shared Pydantic models (`shared/schemas.py`) | Done |
+| DB schema + Alembic migrations | Done |
+| Pipeline discover + fetch | Done |
+| Pipeline parse + normalize | Done |
+| Pipeline load + CLI | Done |
+| FastAPI backend | Done |
+| Next.js frontend (3 views) | Done |
+| Docs + deploy configs | Done |
+
+**Build sequence (recommended order):**
+
+1. Shared schemas — Pydantic models from `output.py`
+2. DB + migrations — tables and seed from pipeline
+3. Pipeline — discover → fetch → parse → normalize → load (validate with `ek-359g` first)
+4. API — endpoints against real data
+5. Frontend — shadcn/ui setup + three views wired to API
+6. Docs + deploy configs — architecture.md, `.env.example`, Vercel/Railway files
+
+## Open items
+
+- **Postgres connection string** — confirm host/port/user for `emirates.benchmarking` (in `.env`, not committed)
+- **Gemini API key** — provide `GOOGLE_API_KEY` locally
+- **Air India slug** — verify AeroLOPA uses `ai` during discovery; adjust config if different
+
+## Key design decisions
+
+Track significant architectural choices here. When a decision is reversed, mark the old entry **Superseded** and add a new row — do not delete history.
+
+| ID | Decision | Rationale | Alternatives considered | Date |
+|----|----------|-----------|-------------------------|------|
+| KD-001 | **Monolithic repo** — pipeline, backend, frontend, and shared schemas in one repository | Simpler local dev, shared Pydantic models, single PR workflow for Phase 1 | Separate repos per service; polyrepo with published schema package | 2026-06-29 |
+| KD-002 | **Phase 1 scope: aircraft hardware only** — defer readme section [2] cabin-class *flight* features (check-in, baggage, etc.) | Unblocks end-to-end pipeline + comparison UI on a single data source (AeroLOPA) before adding second source and schema | Build both sections in parallel | 2026-06-29 |
+| KD-003 | **Target airlines:** `ek`, `ba`, `ai` on AeroLOPA | Core benchmarking set for Emirates competitive analysis | Broader airline list in Phase 1 | 2026-06-29 |
+| KD-004 | **Parse embedded Next.js JSON first; LLM only for normalization** — not LLM-on-raw-HTML as primary path | Deterministic extraction from `self.__next_f.push(...)` payloads is cheaper, faster, and more reproducible; LLM maps irregular fields into [`output.py`](../output.py) shape | Full HTML → LLM extraction; rules-only mapping without LLM | 2026-06-29 |
+| KD-005 | **Gemini via Langchain** — default `gemini-2.5-pro`, swappable via `LLM_MODEL` | Matches readme requirement; Langchain gives model swap without code changes | Direct Google SDK only; other providers in Phase 1 | 2026-06-29 |
+| KD-006 | **`svg_id` as natural key** (e.g. `ek-359g`) for aircraft configurations | Stable AeroLOPA identifier; used in URLs, raw HTML paths, and compare UI | Composite key (airline + aircraft_type + config code) | 2026-06-29 |
+| KD-007 | **Postgres `benchmarking` schema** in existing `emirates` database | Reuses prepared local infra; isolates tables via schema namespace | Dedicated database; SQLite for dev | 2026-06-29 |
+| KD-008 | **JSONB for nested aircraft fields** — `seat_counts`, `wifi`, `seat_rating_summary` | Avoids wide sparse tables; matches document-shaped source data | Fully normalized child tables for every nested object | 2026-06-29 |
+| KD-009 | **Incremental pipeline** — `--skip-existing` skips extraction for configs already in DB; default always upserts after extraction | Reduces HTTP load, LLM cost, and re-run time when backfilling net-new configs | Always full re-fetch; cron-only freshness | 2026-06-29 |
+| KD-010 | **Manual CLI pipeline** (`python -m pipeline.run`) for Phase 1 | No scheduler/queue infra until refresh cadence is defined | Scheduled job (Railway cron, Airflow) in Phase 1 | 2026-06-29 |
+| KD-011 | **Raw HTML audit trail** at `data/raw/{svg_id}.html` | Replay and debug parse/normalize without re-scraping; supports future LLM-on-HTML fallback | Fetch-only, no local cache | 2026-06-29 |
+| KD-012 | **Shared schemas** in [`shared/schemas.py`](../shared/schemas.py) imported by pipeline and backend | Single validation contract from extraction through API | Duplicate Pydantic models per layer | 2026-06-29 |
+| KD-013 | **FastAPI compare endpoint returns pre-pivoted rows** (feature → values per config) | Frontend renders a table directly; avoids client-side reshape for 2–4 columns | Client-side pivot; GraphQL field selection | 2026-06-29 |
+| KD-014 | **Slim API DTOs** — no raw HTML or seat-level data in list/summary endpoints | Keeps fleet and summary views fast; detail endpoint for drill-down | Return full source payload everywhere | 2026-06-29 |
+| KD-015 | **Next.js App Router + shadcn/ui** — compact light theme, TanStack Table | Standardised design system per readme; data-dense tables inspired by Eleken/LCM Hub | MUI, Ant Design, plain Tailwind | 2026-06-29 |
+| KD-016 | **Deploy split:** frontend → Vercel, backend → Railway | Matches readme deployment targets; fits static/SSR frontend + long-running API | Single host; containerise both on Railway | 2026-06-29 |
+
+## Change log
+
+Record notable architecture, schema, API, and deployment changes here (newest first). Link KD-* IDs when a change reflects a new or updated design decision.
+
+| Date | Change |
+|------|--------|
+| 2026-06-29 | Pipeline CLI: `--skip-existing` skips extraction for configs already in DB; default re-runs always upsert (no DB write skip on matching `last_updated`); `--force` re-fetches HTML only |
+| 2026-06-29 | Pipeline data quality: enriched deterministic normalize, LLM deep-merge over base, `data/parsed/` artifacts, clearer updated/unchanged logging, `--force` re-writes DB |
+| 2026-06-29 | Merged Phase 1 development plan into `architecture.md` — pipeline stage detail, frontend view specs, DB column reference, implementation status |
+| 2026-06-29 | Phase 1 scaffolding: `shared/schemas.py`, Alembic migrations, FastAPI backend (summary/fleet/detail/compare), Next.js frontend (3 views), `.env.example`, Vercel/Railway configs |
+| 2026-06-29 | Initial architecture doc — monorepo layout, data flow diagram, local dev and deployment notes |
+
+**How to update:** Add a row at the top when you change schema, API contracts, pipeline behaviour, deploy targets, or Phase scope. For substantive choices, add or update a row in [Key design decisions](#key-design-decisions) first, then reference the KD ID in the changelog entry.

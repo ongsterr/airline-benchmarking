@@ -1,0 +1,40 @@
+[tool.poetry]
+name = "flight-benchmarking"
+version = "0.1.0"
+description = "Aircraft hardware benchmarking pipeline and API"
+authors = ["chrisongg"]
+readme = "readme.md"
+packages = [
+    { include = "shared" },
+    { include = "pipeline" },
+    { include = "backend" },
+]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.115.0"
+uvicorn = { extras = ["standard"], version = "^0.32.0" }
+sqlalchemy = "^2.0.36"
+psycopg = { extras = ["binary"], version = "^3.2.3" }
+alembic = "^1.14.0"
+pydantic = "^2.10.0"
+pydantic-settings = "^2.6.0"
+httpx = "^0.28.0"
+beautifulsoup4 = "^4.12.3"
+langchain = "^0.3.14"
+langchain-google-genai = "^2.0.8"
+python-dotenv = "^1.0.1"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.8.0"
+black = "^24.10.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+
+[tool.ruff]
+line-length = 100
