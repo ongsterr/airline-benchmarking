@@ -56,7 +56,7 @@ flight-benchmarking/
 └── readme.md
 ```
 
-Deploy targets: `frontend/` → Vercel, `backend/` → Railway (each with its own config file).
+Deploy targets: `frontend/` → Vercel, backend API → Railway (root [`railway.toml`](../railway.toml) + [`nixpacks.toml`](../nixpacks.toml)).
 
 ## Data flow
 
@@ -215,7 +215,7 @@ Base URL: `http://localhost:8000`
 - Summary endpoint uses SQL aggregations (not N+1)
 - Compare endpoint returns a pre-pivoted structure (`rows`: feature name → values per column) plus `columns` metadata for readable table headers — no client-side reshape or extra detail fetches
 - Response schemas are slim DTOs (no raw HTML, no seat-level data in list views)
-- CORS configured for local dev + Vercel origin
+- CORS configured for local dev, production Vercel origin, and `*.vercel.app` previews via `CORS_ORIGIN_REGEX`
 
 ## Frontend
 
@@ -296,7 +296,7 @@ cd backend && poetry run alembic upgrade head
 python -m pipeline.run --airlines ek,ba,ai
 
 # 4. Backend
-cd backend && poetry run uvicorn app.main:app --reload --port 8000
+poetry run uvicorn backend.app.main:app --reload --port 8000
 
 # 5. Frontend
 cd frontend && npm install && npm run dev
@@ -306,10 +306,12 @@ cd frontend && npm install && npm run dev
 
 | Component | Target | Config |
 |-----------|--------|--------|
-| Frontend | Vercel | `frontend/vercel.json`, root directory `frontend`, set `NEXT_PUBLIC_API_URL` |
-| Backend | Railway | `backend/railway.toml` or `Procfile`, `uvicorn app.main:app`, set `DATABASE_URL`, `CORS_ORIGINS` |
+| Frontend | Vercel | Root directory `frontend`, set `NEXT_PUBLIC_API_URL` |
+| Backend | Railway | [`railway.toml`](../railway.toml), [`nixpacks.toml`](../nixpacks.toml), set `DATABASE_URL`, `CORS_ORIGINS`, `CORS_ORIGIN_REGEX` |
 
-Secrets documented in [`.env.example`](../.env.example): `DATABASE_URL`, `GOOGLE_API_KEY`, `LLM_MODEL`, `NEXT_PUBLIC_API_URL`.
+Step-by-step guide: [deployment.md](./deployment.md).
+
+Secrets documented in [`.env.example`](../.env.example): `DATABASE_URL`, `GOOGLE_API_KEY`, `LLM_MODEL`, `CORS_ORIGINS`, `CORS_ORIGIN_REGEX`, `NEXT_PUBLIC_API_URL`.
 
 ## Environment variables
 

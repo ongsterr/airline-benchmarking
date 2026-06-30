@@ -1,7 +1,2 @@
-[build]
-builder = "nixpacks"
-
-[deploy]
-startCommand = "cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
-healthcheckPath = "/health"
-restartPolicyType = "on_failure"
+# Railway config lives at the repo root: ../railway.toml
+# Service root directory must be the monorepo root (not backend/).

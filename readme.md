@@ -64,13 +64,14 @@ poetry run python -m pipeline.run --airlines ek,ba,ai --limit 5
 poetry run python -m pipeline.run --airlines ek,ba,ai --skip-existing   # backfill net-new configs only
 
 # Backend API
-cd backend && poetry run uvicorn app.main:app --reload --port 8000
+poetry run uvicorn backend.app.main:app --reload --port 8000
 
 # Frontend
 cd frontend && npm install && npm run dev
 ```
 
-See [docs/architecture.md](./docs/architecture.md) for full details.
+See [docs/architecture.md](./docs/architecture.md) for full details.  
+See [docs/deployment.md](./docs/deployment.md) for Vercel + Railway deployment.
 
 ## Phase 2 Development
 

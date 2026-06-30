@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     google_api_key: str = ""
     llm_model: str = "gemini-2.5-pro"
     cors_origins: str = "http://localhost:3000"
+    cors_origin_regex: str = ""
 
     @field_validator("database_url", mode="before")
     @classmethod
