@@ -1,0 +1,219 @@
+{
+  "source": "llm",
+  "research_model": "gemini-2.5-pro",
+  "researched_at": "2026-06-30T18:06:44.464878+00:00",
+  "sources_by_cabin": {
+    "first": [
+      {
+        "url": "https://www.united.com/en/us/fly/travel/baggage/checked-baggage.html",
+        "cabin_keys": [
+          "first"
+        ],
+        "page_type": "baggage",
+        "title": "Checked baggage policy",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.united.com/en/us/fly/travel/premier-access.html",
+        "cabin_keys": [
+          "first"
+        ],
+        "page_type": "general",
+        "title": "Premier Access",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.united.com/en/us/fly/travel/airport/united-club-and-lounges/access.html",
+        "cabin_keys": [
+          "first"
+        ],
+        "page_type": "lounge",
+        "title": "United Club and lounges - Access",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.upgradedpoints.com/travel/airlines/united-airlines-boarding-groups/",
+        "cabin_keys": [
+          "first"
+        ],
+        "page_type": "general",
+        "title": "United Airlines Boarding Groups & Process [2024]",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.cabinzero.com/blogs/news/united-airlines-baggage-allowance",
+        "cabin_keys": [
+          "first"
+        ],
+        "page_type": "baggage",
+        "title": "United Airlines - 2024 Updated Guide - Baggage Allowance and Fees",
+        "source_type": "discovered"
+      }
+    ],
+    "business": [
+      {
+        "url": "https://www.united.com/en/us/fly/travel/baggage/checked-baggage.html",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "baggage",
+        "title": "Checked baggage policy",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.united.com/en/us/fly/travel/premier-access.html",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "general",
+        "title": "Premier Access",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.united.com/en/us/fly/travel/airport/united-club-and-lounges/access.html",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "lounge",
+        "title": "United Club and lounges - Access",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.united.com/en/us/newsroom/announcements/cision-124434",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "cabin_product",
+        "title": "United Debuts New Custom Amenity Kits from Away Ahead of Summer Travel Boom",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://liveandletsfly.com/united-airlines-away-amenity-kit/",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "cabin_product",
+        "title": "Review: United Airlines Mini Hardshell Suitcase Amenity Kit By Away",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://onemileatatime.com/guides/united-polaris-lounge-access/",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "lounge",
+        "title": "United Polaris Lounge Access Rules (2024)",
+        "source_type": "discovered"
+      }
+    ],
+    "premium_economy": [
+      {
+        "url": "https://www.united.com/en/us/fly/travel/inflight/united-premium-plus.html",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "general",
+        "title": "United Premium Plus",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.united.com/en/us/fly/travel/baggage/checked-baggage.html",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "baggage",
+        "title": "Checked baggage policy",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.going.com/guides/united-premium-plus",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "general",
+        "title": "United Premium Plus Review + Full Guide (2024)",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.united.com/en/us/newsroom/announcements/cision-124434",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "cabin_product",
+        "title": "United Debuts New Custom Amenity Kits from Away Ahead of Summer Travel Boom",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://simpleflying.com/everything-you-need-to-know-about-united-premium-plus/",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "general",
+        "title": "Everything You Need To Know About United Premium Plus",
+        "source_type": "discovered"
+      }
+    ],
+    "economy": [
+      {
+        "url": "https://www.united.com/en/us/fly/travel/baggage/carry-on-bags.html",
+        "cabin_keys": [
+          "economy"
+        ],
+        "page_type": "baggage",
+        "title": "Carry-on bags",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.united.com/en/us/fly/travel/baggage/checked-baggage.html",
+        "cabin_keys": [
+          "economy"
+        ],
+        "page_type": "baggage",
+        "title": "Checked baggage policy",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.united.com/en/us/fly/travel/airport/boarding-process.html",
+        "cabin_keys": [
+          "economy"
+        ],
+        "page_type": "general",
+        "title": "Boarding process",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.nerdwallet.com/article/travel/united-airlines-baggage-fees",
+        "cabin_keys": [
+          "economy"
+        ],
+        "page_type": "baggage",
+        "title": "The Complete Guide to United Airlines Baggage Fees",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.forbes.com/advisor/credit-cards/travel-rewards/united-baggage-fees/",
+        "cabin_keys": [
+          "economy"
+        ],
+        "page_type": "baggage",
+        "title": "United Airlines Baggage Fees And How To Avoid Them",
+        "source_type": "discovered"
+      }
+    ]
+  },
+  "grounding_queries": [
+    "United Airlines cabin classes",
+    "United Polaris vs United First vs United Business",
+    "United Airlines baggage allowance",
+    "United Airlines carry-on bag policy",
+    "United Airlines checked baggage policy",
+    "United Airlines Premier access benefits",
+    "United Club access policy",
+    "United Polaris lounge access",
+    "United Airlines boarding process",
+    "United Polaris amenity kit",
+    "United Premium Plus amenity kit",
+    "United Airlines amenity kit",
+    "United Airlines flight benefits by cabin class"
+  ]
+}

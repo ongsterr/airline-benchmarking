@@ -1,0 +1,199 @@
+{
+  "first": {
+    "cabin_class": "First",
+    "sources": [
+      {
+        "url": "https://www.britishairways.com/en-us/information/travel-classes/first/first",
+        "title": "First | Travel classes - British Airways",
+        "publisher": "britishairways.com"
+      },
+      {
+        "url": "https://www.britishairways.com/en-us/information/baggage-essentials",
+        "title": "Baggage essentials | Information - British Airways",
+        "publisher": "britishairways.com"
+      },
+      {
+        "url": "https://www.going.com/guides/british-airways-first-class",
+        "title": "The Complete Guide to British Airways First Class",
+        "publisher": "Going.com"
+      },
+      {
+        "url": "https://princeoftravel.com/guides/british-airways-first-class/",
+        "title": "The Complete Guide to British Airways First Class | Prince of Travel",
+        "publisher": "Prince of Travel"
+      },
+      {
+        "url": "https://www.businessclass.com/airlines/british-airways/first-class",
+        "title": "Review of British Airways First Class",
+        "publisher": "Businessclass.com"
+      }
+    ],
+    "features": {
+      "check-in_priority": "Yes",
+      "cabin_bag_pieces": 2,
+      "cabin_bag_kg_per_piece": 23,
+      "cabin_bag_kg_total": null,
+      "checked_bag_pieces": 3,
+      "checked_bag_kg_per_piece": 32,
+      "checked_bag_kg_total": null,
+      "boarding_priority": "Yes",
+      "lounge_access": "Yes",
+      "amenity_kit": [
+        "eyemask",
+        "socks",
+        "earplugs",
+        "dental kit",
+        "pen",
+        "facial wipes",
+        "moisturiser",
+        "lip balm",
+        "deodorant",
+        "tissues"
+      ],
+      "amenity_kit_brand": "Temperley London / Elemis"
+    }
+  },
+  "business": {
+    "cabin_class": "Business",
+    "sources": [
+      {
+        "url": "https://www.britishairways.com/en-gb/information/travel-classes/business/club-world",
+        "title": "Club World | Business class flights - British Airways",
+        "publisher": "britishairways.com"
+      },
+      {
+        "url": "https://www.britishairways.com/en-us/information/baggage-essentials/checked-baggage-allowances",
+        "title": "Checked baggage allowances | Information - British Airways",
+        "publisher": "britishairways.com"
+      },
+      {
+        "url": "https://www.britishairways.com/en-gb/information/lounges",
+        "title": "Lounges | Information - British Airways",
+        "publisher": "britishairways.com"
+      },
+      {
+        "url": "https://mediacentre.britishairways.com/pressrelease/details/86/2025-259/14139",
+        "title": "BRITISH AIRWAYS LAUNCHES NEW COLLECTABLE RANGE OF BUSINESS CLASS AMENITY KITS",
+        "publisher": "British Airways Media Centre"
+      },
+      {
+        "url": "https://www.vagari-bags.com/blogs/reviews/british-airways-baggage-allowance",
+        "title": "British Airways Baggage Guide 2026 - What You Should Know",
+        "publisher": "Vagari Bags"
+      }
+    ],
+    "features": {
+      "check-in_priority": "Yes",
+      "cabin_bag_pieces": 2,
+      "cabin_bag_kg_per_piece": 23,
+      "cabin_bag_kg_total": null,
+      "checked_bag_pieces": 2,
+      "checked_bag_kg_per_piece": 32,
+      "checked_bag_kg_total": null,
+      "boarding_priority": "Yes",
+      "lounge_access": "Yes",
+      "amenity_kit": [
+        "moisturiser",
+        "multi balm",
+        "earplugs",
+        "dental kit",
+        "eyemask",
+        "socks"
+      ],
+      "amenity_kit_brand": "The White Company / anatom\u0113"
+    }
+  },
+  "premium_economy": {
+    "cabin_class": "Premium Economy",
+    "sources": [
+      {
+        "url": "https://www.britishairways.com/en-gb/information/travel-classes/premium-economy/world-traveller-plus",
+        "title": "World Traveller Plus | British Airways premium economy",
+        "publisher": "britishairways.com"
+      },
+      {
+        "url": "https://www.britishairways.com/en-us/information/baggage-essentials/checked-baggage-allowances",
+        "title": "Checked baggage allowances | Information - British Airways",
+        "publisher": "britishairways.com"
+      },
+      {
+        "url": "https://www.britishairways.com/high-life/article/eight-reasons-to-upgrade-to-world-traveller-plus",
+        "title": "Eight reasons to upgrade to World Traveller Plus | High Life Magazine",
+        "publisher": "British Airways High Life Magazine"
+      },
+      {
+        "url": "https://thepointsguy.com/news/british-airways-new-premium-economy-amenity-kits/",
+        "title": "British Airways to Introduce New Premium Economy Amenity Kits and Blankets Next Week",
+        "publisher": "The Points Guy"
+      },
+      {
+        "url": "https://simpleflying.com/british-airways-world-traveller-plus-benefits-guide/",
+        "title": "What Are The Benefits Of Flying In British Airways' World Traveller Plus?",
+        "publisher": "Simple Flying"
+      }
+    ],
+    "features": {
+      "check-in_priority": "No",
+      "cabin_bag_pieces": 2,
+      "cabin_bag_kg_per_piece": 23,
+      "cabin_bag_kg_total": null,
+      "checked_bag_pieces": 2,
+      "checked_bag_kg_per_piece": 23,
+      "checked_bag_kg_total": null,
+      "boarding_priority": "Yes",
+      "lounge_access": "No",
+      "amenity_kit": [
+        "eyeshade",
+        "socks",
+        "pen",
+        "toothbrush",
+        "toothpaste",
+        "lip balm"
+      ],
+      "amenity_kit_brand": null
+    }
+  },
+  "economy": {
+    "cabin_class": "Economy",
+    "sources": [
+      {
+        "url": "https://www.britishairways.com/en-gb/information/travel-classes/economy/world-traveller",
+        "title": "World Traveller | British Airways economy class",
+        "publisher": "britishairways.com"
+      },
+      {
+        "url": "https://www.britishairways.com/en-us/information/baggage-essentials/checked-baggage-allowances",
+        "title": "Checked baggage allowances | Information - British Airways",
+        "publisher": "britishairways.com"
+      },
+      {
+        "url": "https://www.britishairways.com/en-us/information/baggage-essentials/hand-baggage-allowances",
+        "title": "Hand baggage allowances | Information - British Airways",
+        "publisher": "britishairways.com"
+      },
+      {
+        "url": "https://www.mybaggage.com/shipping/airlines/british-airways-baggage-allowance/",
+        "title": "British Airways 2026 Baggage Allowance",
+        "publisher": "My Baggage"
+      },
+      {
+        "url": "https://www.baggage-allowance.com/british-airways-baggage-allowance/",
+        "title": "British Airways Baggage Allowance 2024",
+        "publisher": "baggage-allowance.com"
+      }
+    ],
+    "features": {
+      "check-in_priority": "No",
+      "cabin_bag_pieces": 2,
+      "cabin_bag_kg_per_piece": 23,
+      "cabin_bag_kg_total": null,
+      "checked_bag_pieces": 1,
+      "checked_bag_kg_per_piece": 23,
+      "checked_bag_kg_total": null,
+      "boarding_priority": "No",
+      "lounge_access": "No",
+      "amenity_kit": null,
+      "amenity_kit_brand": null
+    }
+  }
+}

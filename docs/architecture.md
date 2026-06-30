@@ -8,7 +8,9 @@ Monolithic repo with three layers:
 2. **Backend** (`backend/`) — FastAPI REST API serving aggregated data from Postgres
 3. **Frontend** (`frontend/`) — Next.js + shadcn/ui comparison dashboard
 
-**In scope (Phase 1):** Aircraft hardware features only (pipeline + DB + API + 3 UI views). Cabin-class flight features are deferred.
+**In scope (Phase 1):** Aircraft hardware features (pipeline + DB + API + 3 UI views).
+
+**In scope (Phase 2):** Cabin-class *flight* features (baggage, lounge, amenities) at airline × cabin level — separate pipeline, DB tables, API extensions, detail + airline compare UI.
 
 See [Key design decisions](#key-design-decisions) for rationale behind major choices. Update that section and the [Change log](#change-log) when scope, stack, or architecture changes.
 
@@ -200,6 +202,23 @@ python -m pipeline.run --airlines ek --limit 5 --skip-existing   # backfill only
 python -m pipeline.run --airlines ek --limit 5 --force           # dev: re-fetch from AeroLOPA
 ```
 
+### Flight features pipeline (`pipeline/run_flight.py`)
+
+| Stage | Module | Description |
+|-------|--------|-------------|
+| Research | `pipeline/flight_research.py` | Gemini + Google Search grounding; EPD prompt (`flight_features_research_prompt.py`); ≥5 credible sources per cabin |
+| Load | `pipeline/flight_load.py` | Upsert `flight_feature_sources` + `airline_cabin_flight_features` |
+
+**Research flow:** A single grounded LLM call searches the web per airline, collects credible sources per cabin class, and returns JSON matching `output.py` (`features` nested per cabin + `sources` arrays). Artifacts land in `data/parsed/flight/{slug}.llm.json` and `.meta.json` (model, researched_at, sources_by_cabin, grounding queries).
+
+```bash
+python -m pipeline.run_flight --airlines ek,ba,ai
+python -m pipeline.run_flight --airlines ek --force         # re-run LLM research
+python -m pipeline.run_flight --airlines ek --skip-existing # skip airlines already in DB
+```
+
+Requires `GOOGLE_API_KEY` and `LLM_MODEL` (default `gemini-2.5-pro`). Google Search grounding is billed per prompt on Gemini 2.5.
+
 ## Database schema
 
 Schema: `benchmarking` in Neon Postgres (database name from your Neon project, e.g. `neondb`).
@@ -210,6 +229,8 @@ Schema: `benchmarking` in Neon Postgres (database name from your Neon project, e
 | `aircraft_configurations` | Aircraft-level features | `id` UUID PK, `svg_id` unique, `airline_id` UUID FK, `source_url`, `aircraft_type`, `configuration`, dual-deck cols (`is_dual_deck`, `deck`, `parent_svg_id`, `deck_state`, `decks` JSONB), `seat_counts` JSONB, `wifi` JSONB, `ife_*`, `last_updated`, `fetched_at`, `updated_at` |
 | `cabin_configurations` | Cabin-level features | `id` UUID PK, `aircraft_id` UUID FK, `deck`, `cabin_key` (unique per aircraft+deck), pitch/width/recline, USB, power, `layout`, seat fields |
 | `pipeline_runs` | Audit trail | `id` UUID PK, `started_at`, `airlines`, `configs_discovered`, `configs_updated` |
+| `flight_feature_sources` | Curated/discovered airline product page URLs | `airline_id` FK, `url`, `source_type`, `page_type`, `cabin_keys` JSONB, `title`, `http_status`, `fetched_at` |
+| `airline_cabin_flight_features` | Airline × cabin flight benefits | `airline_id` + `cabin_key` unique, typed baggage/priority/lounge/amenity cols, `extra_features` JSONB |
 
 - All primary keys and foreign keys use UUID (`uuid4` on insert)
 - `source_url` stores the AeroLOPA page URL (`https://www.aerolopa.com/{svg_id}`), set at pipeline load
@@ -230,10 +251,11 @@ Base URL: `http://localhost:8000`
 | `POST /api/v1/auth/logout` | Compare edit | No-op server-side; client clears token |
 | `GET /api/v1/airlines/summary` | Summary | Per-airline: fleet count, total seats, aircraft type breakdown, last pipeline update |
 | `GET /api/v1/aircraft` | Fleet detail | Grouped list (dual-deck merged); query params: `airline` and `aircraft_type` (comma-separated multi-value), `search`, `has_premium_economy=true`, `offset`, `limit` |
-| `GET /api/v1/aircraft/{svg_id}` | Detail drill-down | Full grouped aircraft + cabins (resolves `parent_svg_id` groups) |
-| `GET /api/v1/compare?ids=ek-359g,ba-19a&cabin=business` | Compare | `CompareResponse`: `columns` + `rows` (pivoted feature matrix with `field_key`, `scope`, raw `values`); 2–8 configs |
-| `PATCH /api/v1/aircraft/{svg_id}` | Compare edit | Partial update of compare-visible fields; requires `Authorization: Bearer <token>` when `EDIT_PASSWORD` set; returns full `AircraftConfiguration` |
-| `GET /api/v1/export.csv?ids=ek-359g,ba-19a` | Fleet export | CSV download — one row per cabin class per config (aircraft + cabin fields from `shared/compare_fields.py`) |
+| `GET /api/v1/aircraft/{svg_id}` | Detail drill-down | `AircraftDetailResponse`: grouped aircraft + cabins + `flight_features` |
+| `GET /api/v1/compare?ids=ek-359g,ba-19a&cabin=business` | Compare | `CompareResponse`: hardware + flight feature rows (`scope=flight`); 2–8 configs |
+| `GET /api/v1/compare/airlines?slugs=ek,ba&cabin=business` | Airline compare | Flight benefits across 2–8 airlines |
+| `PATCH /api/v1/aircraft/{svg_id}` | Compare edit | Partial update of hardware fields only; returns `AircraftDetailResponse` |
+| `GET /api/v1/export.csv?ids=ek-359g,ba-19a` | Fleet export | CSV — one row per cabin per config (hardware fields) |
 
 **Compare response** (`shared/schemas.py`):
 
@@ -436,6 +458,9 @@ Record notable architecture, schema, API, and deployment changes here (newest fi
 
 | Date | Change |
 |------|--------|
+| 2026-06-30 | Flight features: LLM-first research via `flight_research.py` + Google Search grounding; removed HTML discover/fetch/clean pipeline; EPD `flight_features_research_prompt.py`; per-cabin sources in LLM JSON + `flight_feature_sources` DB |
+| 2026-06-30 | Flight URL discovery: EPD-style `flight_url_discovery_prompt.py`, structured `FlightSourceCandidate` output, default LLM merge with seeds, `--seeds-only` opt-out, per-source cabin metadata in extraction + DB |
+| 2026-06-30 | Phase 2: flight features pipeline (`pipeline/run_flight.py`), `airline_cabin_flight_features` + `flight_feature_sources` tables, compare flight rows, `/api/v1/compare/airlines`, aircraft detail page, airline compare UI |
 | 2026-06-30 | Edit auth: `POST/GET /api/v1/auth/*`, `backend/app/auth.py`, Compare **Sign in to edit** dialog, Bearer token on PATCH; `EDIT_PASSWORD` + `SESSION_SECRET` env vars — KD-017, KD-019 |
 | 2026-06-30 | Fleet multi-select filters (`MultiSelectFilter`), premium economy checkbox, select-all-visible, CSV download (`GET /api/v1/export.csv`, `export.py`) — KD-020, KD-022 |
 | 2026-06-30 | Dual-deck pipeline + API grouping: `pipeline/deck.py`, `aircraft_grouping.py`, DB deck columns, Fleet **Dual deck** badge — KD-018 |

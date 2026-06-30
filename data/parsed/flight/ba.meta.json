@@ -1,0 +1,215 @@
+{
+  "source": "llm",
+  "research_model": "gemini-2.5-pro",
+  "researched_at": "2026-06-30T17:20:51.924368+00:00",
+  "sources_by_cabin": {
+    "first": [
+      {
+        "url": "https://www.britishairways.com/en-us/information/travel-classes/first/first",
+        "cabin_keys": [
+          "first"
+        ],
+        "page_type": "general",
+        "title": "First | Travel classes - British Airways",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.britishairways.com/en-us/information/baggage-essentials",
+        "cabin_keys": [
+          "first"
+        ],
+        "page_type": "baggage",
+        "title": "Baggage essentials | Information - British Airways",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.going.com/guides/british-airways-first-class",
+        "cabin_keys": [
+          "first"
+        ],
+        "page_type": "cabin_product",
+        "title": "The Complete Guide to British Airways First Class",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://princeoftravel.com/guides/british-airways-first-class/",
+        "cabin_keys": [
+          "first"
+        ],
+        "page_type": "cabin_product",
+        "title": "The Complete Guide to British Airways First Class | Prince of Travel",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.businessclass.com/airlines/british-airways/first-class",
+        "cabin_keys": [
+          "first"
+        ],
+        "page_type": "cabin_product",
+        "title": "Review of British Airways First Class",
+        "source_type": "discovered"
+      }
+    ],
+    "business": [
+      {
+        "url": "https://www.britishairways.com/en-gb/information/travel-classes/business/club-world",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "general",
+        "title": "Club World | Business class flights - British Airways",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.britishairways.com/en-us/information/baggage-essentials/checked-baggage-allowances",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "baggage",
+        "title": "Checked baggage allowances | Information - British Airways",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.britishairways.com/en-gb/information/lounges",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "lounge",
+        "title": "Lounges | Information - British Airways",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://mediacentre.britishairways.com/pressrelease/details/86/2025-259/14139",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "cabin_product",
+        "title": "BRITISH AIRWAYS LAUNCHES NEW COLLECTABLE RANGE OF BUSINESS CLASS AMENITY KITS",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.vagari-bags.com/blogs/reviews/british-airways-baggage-allowance",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "baggage",
+        "title": "British Airways Baggage Guide 2026 - What You Should Know",
+        "source_type": "discovered"
+      }
+    ],
+    "premium_economy": [
+      {
+        "url": "https://www.britishairways.com/en-gb/information/travel-classes/premium-economy/world-traveller-plus",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "cabin_product",
+        "title": "World Traveller Plus | British Airways premium economy",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.britishairways.com/en-us/information/baggage-essentials/checked-baggage-allowances",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "baggage",
+        "title": "Checked baggage allowances | Information - British Airways",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.britishairways.com/high-life/article/eight-reasons-to-upgrade-to-world-traveller-plus",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "general",
+        "title": "Eight reasons to upgrade to World Traveller Plus | High Life Magazine",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://thepointsguy.com/news/british-airways-new-premium-economy-amenity-kits/",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "cabin_product",
+        "title": "British Airways to Introduce New Premium Economy Amenity Kits and Blankets Next Week",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://simpleflying.com/british-airways-world-traveller-plus-benefits-guide/",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "general",
+        "title": "What Are The Benefits Of Flying In British Airways' World Traveller Plus?",
+        "source_type": "discovered"
+      }
+    ],
+    "economy": [
+      {
+        "url": "https://www.britishairways.com/en-gb/information/travel-classes/economy/world-traveller",
+        "cabin_keys": [
+          "economy"
+        ],
+        "page_type": "general",
+        "title": "World Traveller | British Airways economy class",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.britishairways.com/en-us/information/baggage-essentials/checked-baggage-allowances",
+        "cabin_keys": [
+          "economy"
+        ],
+        "page_type": "baggage",
+        "title": "Checked baggage allowances | Information - British Airways",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.britishairways.com/en-us/information/baggage-essentials/hand-baggage-allowances",
+        "cabin_keys": [
+          "economy"
+        ],
+        "page_type": "baggage",
+        "title": "Hand baggage allowances | Information - British Airways",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.mybaggage.com/shipping/airlines/british-airways-baggage-allowance/",
+        "cabin_keys": [
+          "economy"
+        ],
+        "page_type": "baggage",
+        "title": "British Airways 2026 Baggage Allowance",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.baggage-allowance.com/british-airways-baggage-allowance/",
+        "cabin_keys": [
+          "economy"
+        ],
+        "page_type": "baggage",
+        "title": "British Airways Baggage Allowance 2024",
+        "source_type": "discovered"
+      }
+    ]
+  },
+  "grounding_queries": [
+    "British Airways First Class benefits",
+    "British Airways First Class baggage allowance",
+    "British Airways First Class lounge access",
+    "British Airways First Class amenity kit",
+    "British Airways First Class check-in and boarding",
+    "British Airways Club World benefits",
+    "British Airways Club World baggage allowance",
+    "British Airways Club World lounge access",
+    "British Airways Club World amenity kit",
+    "British Airways Club World check-in and boarding",
+    "British Airways World Traveller Plus benefits",
+    "British Airways World Traveller Plus baggage allowance",
+    "British Airways World Traveller Plus amenity kit",
+    "British Airways World Traveller Plus check-in and boarding",
+    "British Airways World Traveller benefits",
+    "British Airways World Traveller baggage allowance",
+    "British Airways World Traveller amenity kit",
+    "British Airways World Traveller check-in and boarding"
+  ]
+}

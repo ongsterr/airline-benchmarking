@@ -1,0 +1,65 @@
+{
+  "cabins": {
+    "business": {
+      "cabin_class": "Upper Class",
+      "check_in_priority": "Yes",
+      "cabin_bag_pieces": 2,
+      "cabin_bag_kg_per_piece": null,
+      "cabin_bag_kg_total": 16,
+      "checked_bag_pieces": 2,
+      "checked_bag_kg_per_piece": 32,
+      "checked_bag_kg_total": null,
+      "boarding_priority": "Yes",
+      "lounge_access": "Yes",
+      "amenity_kit": [
+        "lip balm",
+        "hand cream",
+        "face cream",
+        "toothbrush",
+        "eyeshade",
+        "socks",
+        "earplugs",
+        "toothpaste",
+        "pen"
+      ],
+      "amenity_kit_brand": "REN Clean Skincare",
+      "extra_features": {}
+    },
+    "premium_economy": {
+      "cabin_class": "Premium",
+      "check_in_priority": "Yes",
+      "cabin_bag_pieces": 1,
+      "cabin_bag_kg_per_piece": 10,
+      "cabin_bag_kg_total": null,
+      "checked_bag_pieces": 2,
+      "checked_bag_kg_per_piece": 23,
+      "checked_bag_kg_total": null,
+      "boarding_priority": "Yes",
+      "lounge_access": "No",
+      "amenity_kit": [
+        "eyemask",
+        "earplugs",
+        "toothbrush",
+        "toothpaste",
+        "pen"
+      ],
+      "amenity_kit_brand": null,
+      "extra_features": {}
+    },
+    "economy": {
+      "cabin_class": "Economy",
+      "check_in_priority": "No",
+      "cabin_bag_pieces": 1,
+      "cabin_bag_kg_per_piece": 10,
+      "cabin_bag_kg_total": null,
+      "checked_bag_pieces": 1,
+      "checked_bag_kg_per_piece": 23,
+      "checked_bag_kg_total": null,
+      "boarding_priority": "No",
+      "lounge_access": "No",
+      "amenity_kit": null,
+      "amenity_kit_brand": null,
+      "extra_features": {}
+    }
+  }
+}

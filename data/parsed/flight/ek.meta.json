@@ -1,0 +1,217 @@
+{
+  "source": "llm",
+  "research_model": "gemini-2.5-pro",
+  "researched_at": "2026-06-30T17:20:23.970232+00:00",
+  "sources_by_cabin": {
+    "first": [
+      {
+        "url": "https://www.emirates.com/uk/english/experience/cabin-features/first-class/",
+        "cabin_keys": [
+          "first"
+        ],
+        "page_type": "cabin_product",
+        "title": "First Class | Cabin Features | The Emirates Experience",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.emirates.com/uk/english/experience/our-lounges/first-class-lounge/",
+        "cabin_keys": [
+          "first"
+        ],
+        "page_type": "lounge",
+        "title": "First Class lounge | Our lounges | The Emirates Experience",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.emirates.com/uk/english/before-you-fly/baggage/checked-baggage/",
+        "cabin_keys": [
+          "first"
+        ],
+        "page_type": "baggage",
+        "title": "Checked baggage | Baggage | Before You Fly",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.going.com/guides/emirates-first-class",
+        "cabin_keys": [
+          "first"
+        ],
+        "page_type": "cabin_product",
+        "title": "Everything to Know About the Emirates First Class Experience",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.emirates.com/english/experience/seasonal-occasions/amenity-kits/",
+        "cabin_keys": [
+          "first"
+        ],
+        "page_type": "cabin_product",
+        "title": "Onboard comfort | Cabin Features | The Emirates Experience",
+        "source_type": "discovered"
+      }
+    ],
+    "business": [
+      {
+        "url": "https://www.emirates.com/uk/english/experience/cabin-features/business-class/",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "cabin_product",
+        "title": "Business Class | Cabin Features | The Emirates Experience",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.emirates.com/uk/english/before-you-fly/baggage/checked-baggage/",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "baggage",
+        "title": "Checked baggage | Baggage | Before You Fly",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.emirates.com/uk/english/experience/our-lounges/business-class-lounge/",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "lounge",
+        "title": "Business Class lounge | Our lounges | The Emirates Experience",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://simpleflying.com/emirates-business-class-benefits/",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "cabin_product",
+        "title": "What Are The Benefits Of Flying In Emirates' Business Class?",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.going.com/guides/emirates-business-class-a380",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "cabin_product",
+        "title": "Emirates Business Class: Your Guide to Flying the A380",
+        "source_type": "discovered"
+      }
+    ],
+    "premium_economy": [
+      {
+        "url": "https://www.emirates.com/uk/english/experience/cabin-features/premium-economy-class/",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "cabin_product",
+        "title": "Premium Economy | Cabin Features | The Emirates Experience",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.emirates.com/uk/english/before-you-fly/baggage/checked-baggage/",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "baggage",
+        "title": "Checked baggage | Baggage | Before You Fly",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.emirates.com/ae/english/experience/seasonal-occasions/amenity-kits/",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "cabin_product",
+        "title": "Emirates launches new collection of keepsake amenity kits to highlight endangered species",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://themidnightblueelephant.com/emirates-premium-economy/",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "cabin_product",
+        "title": "The Ins & Outs of flying Emirates Premium Economy.",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.going.com/guides/emirates-premium-economy",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "cabin_product",
+        "title": "Emirates Premium Economy: What to Expect on Your Flight Now",
+        "source_type": "discovered"
+      }
+    ],
+    "economy": [
+      {
+        "url": "https://www.emirates.com/uk/english/experience/cabin-features/economy-class/",
+        "cabin_keys": [
+          "economy"
+        ],
+        "page_type": "cabin_product",
+        "title": "Economy Class | Cabin Features | The Emirates Experience",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.emirates.com/uk/english/before-you-fly/baggage/checked-baggage/",
+        "cabin_keys": [
+          "economy"
+        ],
+        "page_type": "baggage",
+        "title": "Checked baggage | Baggage | Before You Fly",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.emirates.com/uk/english/before-you-fly/check-in/",
+        "cabin_keys": [
+          "economy"
+        ],
+        "page_type": "check_in",
+        "title": "How to check in for your Emirates flight to and from Dubai",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.emirates.com/ae/english/experience/seasonal-occasions/amenity-kits/",
+        "cabin_keys": [
+          "economy"
+        ],
+        "page_type": "cabin_product",
+        "title": "Emirates launches new collection of keepsake amenity kits to highlight endangered species",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://upgradedpoints.com/travel/airlines/emirates-boarding-process/",
+        "cabin_keys": [
+          "economy"
+        ],
+        "page_type": "general",
+        "title": "Emirates Boarding Process and Groups - Complete Guide",
+        "source_type": "discovered"
+      }
+    ]
+  },
+  "grounding_queries": [
+    "Emirates first class baggage allowance",
+    "Emirates first class check-in priority",
+    "Emirates first class boarding priority",
+    "Emirates first class lounge access",
+    "Emirates first class amenity kit brand",
+    "Emirates business class baggage allowance",
+    "Emirates business class check-in priority",
+    "Emirates business class boarding priority",
+    "Emirates business class lounge access",
+    "Emirates business class amenity kit brand",
+    "Emirates premium economy baggage allowance",
+    "Emirates premium economy check-in priority",
+    "Emirates premium economy boarding priority",
+    "Emirates premium economy lounge access",
+    "Emirates premium economy amenity kit",
+    "Emirates economy class baggage allowance",
+    "Emirates economy class check-in",
+    "Emirates economy class boarding",
+    "Emirates economy class lounge access",
+    "Emirates economy class amenity kit"
+  ]
+}

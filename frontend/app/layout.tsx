@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Flight Benchmarking",
-  description: "Aircraft hardware configuration comparison",
+  description: "Features comparison",
 };
 
 export default function RootLayout({

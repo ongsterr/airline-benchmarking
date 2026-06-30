@@ -30,10 +30,30 @@ def get_existing_svg_ids(db: Session, svg_ids: list[str]) -> set[str]:
     return {row[0] for row in rows}
 
 
+def _is_code_like_name(name: str, slug: str, iata_code: str | None) -> bool:
+    upper = name.strip().upper()
+    if upper == slug.upper():
+        return True
+    if iata_code and upper == iata_code.strip().upper():
+        return True
+    return False
+
+
+def _should_update_airline_name(
+    airline: Airline, slug: str, name: str, iata_code: str | None
+) -> bool:
+    if not _is_code_like_name(name, slug, iata_code):
+        return True
+    if airline.name and not _is_code_like_name(airline.name, slug, iata_code):
+        return False
+    return True
+
+
 def get_or_create_airline(db: Session, slug: str, name: str, iata_code: str | None) -> Airline:
     airline = db.query(Airline).filter(Airline.slug == slug).first()
     if airline:
-        airline.name = name
+        if _should_update_airline_name(airline, slug, name, iata_code):
+            airline.name = name
         if iata_code:
             airline.iata_code = iata_code
         return airline

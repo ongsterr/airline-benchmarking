@@ -36,6 +36,12 @@ class Airline(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
 
     aircraft: Mapped[list[AircraftConfiguration]] = relationship(back_populates="airline")
+    flight_features: Mapped[list[AirlineCabinFlightFeature]] = relationship(
+        back_populates="airline", cascade="all, delete-orphan"
+    )
+    flight_sources: Mapped[list[FlightFeatureSource]] = relationship(
+        back_populates="airline", cascade="all, delete-orphan"
+    )
 
 
 class AircraftConfiguration(Base):
@@ -142,6 +148,64 @@ class CabinConfiguration(Base):
     seat_description: Mapped[str | None] = mapped_column(Text)
 
     aircraft: Mapped[AircraftConfiguration] = relationship(back_populates="cabins")
+
+
+class FlightFeatureSource(Base):
+    __tablename__ = "flight_feature_sources"
+    __table_args__ = (
+        UniqueConstraint("airline_id", "url", name="uq_flight_source_url"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    airline_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(f"{SCHEMA}.airlines.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    url: Mapped[str] = mapped_column(String(500), nullable=False)
+    source_type: Mapped[str] = mapped_column(String(20), nullable=False, default="curated")
+    page_type: Mapped[str | None] = mapped_column(String(30))
+    cabin_keys: Mapped[list | None] = mapped_column(JSONB)
+    title: Mapped[str | None] = mapped_column(String(200))
+    http_status: Mapped[int | None] = mapped_column(Integer)
+    fetched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    airline: Mapped[Airline] = relationship(back_populates="flight_sources")
+
+
+class AirlineCabinFlightFeature(Base):
+    __tablename__ = "airline_cabin_flight_features"
+    __table_args__ = (
+        UniqueConstraint("airline_id", "cabin_key", name="uq_airline_cabin_flight"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    airline_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(f"{SCHEMA}.airlines.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    cabin_key: Mapped[str] = mapped_column(String(30), nullable=False)
+    cabin_class: Mapped[str | None] = mapped_column(String(30))
+    check_in_priority: Mapped[str | None] = mapped_column(String(20))
+    cabin_bag_pieces: Mapped[int | None] = mapped_column(Integer)
+    cabin_bag_kg_per_piece: Mapped[int | None] = mapped_column(Integer)
+    cabin_bag_kg_total: Mapped[int | None] = mapped_column(Integer)
+    checked_bag_pieces: Mapped[int | None] = mapped_column(Integer)
+    checked_bag_kg_per_piece: Mapped[int | None] = mapped_column(Integer)
+    checked_bag_kg_total: Mapped[int | None] = mapped_column(Integer)
+    boarding_priority: Mapped[str | None] = mapped_column(String(20))
+    lounge_access: Mapped[str | None] = mapped_column(String(20))
+    amenity_kit: Mapped[list | None] = mapped_column(JSONB)
+    amenity_kit_brand: Mapped[str | None] = mapped_column(String(100))
+    extra_features: Mapped[dict | None] = mapped_column(JSONB)
+    source_url: Mapped[str | None] = mapped_column(String(500))
+    fetched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    airline: Mapped[Airline] = relationship(back_populates="flight_features")
 
 
 class PipelineRun(Base):

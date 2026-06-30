@@ -122,6 +122,11 @@ class AirlineSummary(BaseModel):
     config_count: int = 0
     total_fleet_seats: int = 0
     aircraft_types: list[str] = Field(default_factory=list)
+    long_haul_count: int = 0
+    short_haul_count: int = 0
+    airbus_count: int = 0
+    boeing_count: int = 0
+    other_aircraft_count: int = 0
     last_pipeline_update: datetime | None = None
 
 
@@ -139,10 +144,56 @@ class AircraftListItem(BaseModel):
     last_updated: date | None = None
 
 
+class CabinFlightFeatures(BaseModel):
+    cabin_class: str
+    check_in_priority: str | None = None
+    cabin_bag_pieces: int | None = None
+    cabin_bag_kg_per_piece: int | None = None
+    cabin_bag_kg_total: int | None = None
+    checked_bag_pieces: int | None = None
+    checked_bag_kg_per_piece: int | None = None
+    checked_bag_kg_total: int | None = None
+    boarding_priority: str | None = None
+    lounge_access: str | None = None
+    amenity_kit: list[str] | None = None
+    amenity_kit_brand: str | None = None
+    extra_features: dict[str, Any] = Field(default_factory=dict)
+
+
+class AirlineFlightFeatures(BaseModel):
+    cabins: dict[str, CabinFlightFeatures] = Field(default_factory=dict)
+
+
+FlightPageType = Literal["cabin_product", "baggage", "lounge", "check_in", "general"]
+CabinKey = Literal["first", "business", "premium_economy", "economy"]
+
+
+class FlightResearchSource(BaseModel):
+    url: str
+    title: str | None = None
+    publisher: str | None = None
+
+
+class FlightSourceCandidate(BaseModel):
+    url: str
+    cabin_keys: list[str] = Field(default_factory=list)
+    page_type: FlightPageType = "general"
+    title: str | None = None
+    source_type: Literal["curated", "discovered"] = "discovered"
+
+
+class FlightSourceDiscoveryResponse(BaseModel):
+    sources: list[FlightSourceCandidate] = Field(default_factory=list)
+
+
+class AircraftDetailResponse(AircraftConfiguration):
+    flight_features: AirlineFlightFeatures | None = None
+
+
 class CompareRow(BaseModel):
     feature: str
     field_key: str
-    scope: Literal["aircraft", "cabin"]
+    scope: Literal["aircraft", "cabin", "flight"]
     category: str
     values: dict[str, Any]
 
@@ -164,4 +215,15 @@ class CompareConfigColumn(BaseModel):
 
 class CompareResponse(BaseModel):
     columns: list[CompareConfigColumn]
+    rows: list[CompareRow]
+
+
+class CompareAirlineColumn(BaseModel):
+    slug: str
+    iata_code: str | None = None
+    name: str
+
+
+class CompareAirlineResponse(BaseModel):
+    columns: list[CompareAirlineColumn]
     rows: list[CompareRow]

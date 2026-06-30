@@ -1,0 +1,88 @@
+{
+  "cabins": {
+    "first": {
+      "cabin_class": "First",
+      "check_in_priority": "Yes",
+      "cabin_bag_pieces": 1,
+      "cabin_bag_kg_per_piece": 15,
+      "cabin_bag_kg_total": null,
+      "checked_bag_pieces": 3,
+      "checked_bag_kg_per_piece": 32,
+      "checked_bag_kg_total": 50,
+      "boarding_priority": "Yes",
+      "lounge_access": "Yes",
+      "amenity_kit": [
+        "balancing tonic",
+        "cotton pads",
+        "moisturizing cream",
+        "eye cream",
+        "lip balm",
+        "dental kit",
+        "earplugs",
+        "hairbrush",
+        "monitor-cleaning cloth"
+      ],
+      "amenity_kit_brand": "Bamford",
+      "extra_features": {}
+    },
+    "business": {
+      "cabin_class": "Business",
+      "check_in_priority": "Yes",
+      "cabin_bag_pieces": 1,
+      "cabin_bag_kg_per_piece": 10,
+      "cabin_bag_kg_total": null,
+      "checked_bag_pieces": 2,
+      "checked_bag_kg_per_piece": 32,
+      "checked_bag_kg_total": 40,
+      "boarding_priority": "Yes",
+      "lounge_access": "Yes",
+      "amenity_kit": [
+        "cooling body gel",
+        "body balm",
+        "pillow mist",
+        "mouthwash",
+        "dental kit",
+        "eyemask",
+        "earplugs"
+      ],
+      "amenity_kit_brand": "Bamford",
+      "extra_features": {}
+    },
+    "premium_economy": {
+      "cabin_class": "Premium Economy",
+      "check_in_priority": "Yes",
+      "cabin_bag_pieces": 1,
+      "cabin_bag_kg_per_piece": 7,
+      "cabin_bag_kg_total": null,
+      "checked_bag_pieces": 2,
+      "checked_bag_kg_per_piece": 23,
+      "checked_bag_kg_total": 35,
+      "boarding_priority": "Yes",
+      "lounge_access": "No",
+      "amenity_kit": [
+        "socks",
+        "eyeshade",
+        "earplugs",
+        "toothbrush",
+        "toothpaste"
+      ],
+      "amenity_kit_brand": null,
+      "extra_features": {}
+    },
+    "economy": {
+      "cabin_class": "Economy",
+      "check_in_priority": "No",
+      "cabin_bag_pieces": 1,
+      "cabin_bag_kg_per_piece": 7,
+      "cabin_bag_kg_total": null,
+      "checked_bag_pieces": 2,
+      "checked_bag_kg_per_piece": 23,
+      "checked_bag_kg_total": 30,
+      "boarding_priority": "No",
+      "lounge_access": "No",
+      "amenity_kit": null,
+      "amenity_kit_brand": null,
+      "extra_features": {}
+    }
+  }
+}

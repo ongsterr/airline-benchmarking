@@ -5,6 +5,7 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 
 from backend.app.routers.aircraft import get_aircraft_detail
+from backend.app.routers.flight_features import build_flight_compare_rows, get_flight_features_by_slugs
 from pipeline.config import BASE_URL
 from shared.compare_fields import AIRCRAFT_FIELDS, CABIN_FIELDS, field_label
 from shared.schemas import CompareConfigColumn, CompareResponse, CompareRow
@@ -68,6 +69,10 @@ def compare_aircraft(
                 },
             )
         )
+
+    slugs = list({c.svg_id.split("-", 1)[0] for c in configs})
+    flight_by_slug = get_flight_features_by_slugs(db, slugs)
+    rows.extend(build_flight_compare_rows(configs, cabin_key, flight_by_slug))
 
     return CompareResponse(
         columns=[_config_column(c) for c in configs],

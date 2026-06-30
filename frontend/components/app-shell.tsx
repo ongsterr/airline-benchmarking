@@ -4,9 +4,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const NAV = [
-  { href: "/", label: "Summary" },
+  { href: "/", label: "Airline" },
   { href: "/fleet", label: "Fleet" },
-  { href: "/compare", label: "Compare" },
+  { href: "/compare", label: "Compare Aircraft" },
+  { href: "/compare/airlines", label: "Compare Airline" },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -14,7 +15,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const activePath = NAV.some((item) => item.href === pathname)
     ? pathname
-    : "/";
+    : pathname.startsWith("/aircraft")
+      ? "/fleet"
+      : "/";
 
   return (
     <div className="min-h-screen bg-background">
@@ -25,7 +28,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               Flight Benchmarking
             </h1>
             <p className="text-xs text-muted-foreground">
-              Aircraft hardware comparison
+              Features Comparison
             </p>
           </div>
           <Tabs

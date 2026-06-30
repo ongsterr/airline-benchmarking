@@ -1,0 +1,171 @@
+{
+  "source": "llm",
+  "research_model": "gemini-2.5-pro",
+  "researched_at": "2026-06-30T18:07:14.602728+00:00",
+  "sources_by_cabin": {
+    "business": [
+      {
+        "url": "https://flywith.virginatlantic.com/gb/en/upper-class-cabin-and-seat.html",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "cabin_product",
+        "title": "Fly Upper Class",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://help.virginatlantic.com/gb/en/baggage/hand-baggage.html",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "baggage",
+        "title": "Hand baggage",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://help.virginatlantic.com/gb/en/baggage/checked-baggage.html",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "baggage",
+        "title": "What is my checked in baggage allowance?",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://flywith.virginatlantic.com/gb/en/upper-class-cabin-and-seat/clubhouse-airport-lounge.html",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "lounge",
+        "title": "Relax in our Clubhouse lounges",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://corporate.virginatlantic.com/gb/en/media/press-releases/virgin-atlantic-takes-customer-experience-to-a-new-level-with-.html",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "general",
+        "title": "Virgin Atlantic takes customer experience to a new level with sustainable and stylish products",
+        "source_type": "discovered"
+      }
+    ],
+    "premium_economy": [
+      {
+        "url": "https://flywith.virginatlantic.com/gb/en/premium-cabin-and-seat.html",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "cabin_product",
+        "title": "Fly Premium",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://help.virginatlantic.com/gb/en/baggage/hand-baggage.html",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "baggage",
+        "title": "Hand baggage",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://help.virginatlantic.com/gb/en/baggage/checked-baggage.html",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "baggage",
+        "title": "What is my checked in baggage allowance?",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.virginatlantic.com/gb/en/travel-information/airport-guides/london-heathrow/heathrow-lounges.html",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "lounge",
+        "title": "Heathrow Lounges",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://corporate.virginatlantic.com/gb/en/media/press-releases/virgin-atlantic-takes-customer-experience-to-a-new-level-with-.html",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "general",
+        "title": "Virgin Atlantic takes customer experience to a new level with sustainable and stylish products",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.landlopers.com/2014/04/03/virgin-atlantic-premium-economy",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "cabin_product",
+        "title": "A Review of Premium Economy on Virgin Atlantic",
+        "source_type": "discovered"
+      }
+    ],
+    "economy": [
+      {
+        "url": "https://flywith.virginatlantic.com/gb/en/economy-cabin-and-seat.html",
+        "cabin_keys": [
+          "economy"
+        ],
+        "page_type": "cabin_product",
+        "title": "Economy Light, Classic and Delight",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://help.virginatlantic.com/gb/en/baggage/hand-baggage.html",
+        "cabin_keys": [
+          "economy"
+        ],
+        "page_type": "baggage",
+        "title": "Hand baggage",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://help.virginatlantic.com/gb/en/baggage/checked-baggage.html",
+        "cabin_keys": [
+          "economy"
+        ],
+        "page_type": "baggage",
+        "title": "What is my checked in baggage allowance?",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://simpleflying.com/virgin-atlantic-economy-light-classic-delight-differences/",
+        "cabin_keys": [
+          "economy"
+        ],
+        "page_type": "general",
+        "title": "Virgin Atlantic's Economy Class: Unpacking The Differences Between Light, Classic & Delight Fares",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://corporate.virginatlantic.com/gb/en/media/press-releases/virgin-atlantic-takes-customer-experience-to-a-new-level-with-.html",
+        "cabin_keys": [
+          "economy"
+        ],
+        "page_type": "general",
+        "title": "Virgin Atlantic takes customer experience to a new level with sustainable and stylish products",
+        "source_type": "discovered"
+      }
+    ]
+  },
+  "grounding_queries": [
+    "Virgin Atlantic cabin classes",
+    "Virgin Atlantic Upper Class benefits",
+    "Virgin Atlantic Premium benefits",
+    "Virgin Atlantic Economy benefits",
+    "Virgin Atlantic baggage allowance",
+    "Virgin Atlantic hand baggage allowance",
+    "Virgin Atlantic check-in policy",
+    "Virgin Atlantic boarding process",
+    "Virgin Atlantic lounge access policy",
+    "Virgin Atlantic Upper Class amenity kit",
+    "Virgin Atlantic Premium amenity kit",
+    "Virgin Atlantic Economy comfort items"
+  ]
+}

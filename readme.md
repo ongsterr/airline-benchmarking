@@ -57,11 +57,16 @@ cp .env.example .env   # set Neon DATABASE_URL, optional GOOGLE_API_KEY
 
 poetry install
 
-# After pulling schema changes (UUID PKs), reset DB once then load data:
+# After pulling schema changes, reset DB once then load data:
 poetry run python scripts/reset_schema.py
 poetry run python scripts/seed_example.py   # optional: no network
 poetry run python -m pipeline.run --airlines ek,ba,ai --limit 5
 poetry run python -m pipeline.run --airlines ek,ba,ai --skip-existing   # backfill net-new configs only
+
+# Phase 2: cabin flight features (LLM web research → DB)
+poetry run python scripts/seed_flight_example.py   # optional: EK example from output.py, no network
+poetry run python -m pipeline.run_flight --airlines ek,ba,ai
+poetry run python -m pipeline.run_flight --airlines ek --force   # re-run LLM research
 
 # Backend API
 poetry run uvicorn backend.app.main:app --reload --port 8000
@@ -70,6 +75,8 @@ poetry run uvicorn backend.app.main:app --reload --port 8000
 cd frontend && npm install && npm run dev
 ```
 
+New UI routes: `/aircraft/{svg_id}` (detail), `/compare/airlines` (airline-level flight benefits).
+
 See [docs/architecture.md](./docs/architecture.md) for full details.  
 See [docs/deployment.md](./docs/deployment.md) for Vercel + Railway deployment.
 
@@ -77,9 +84,9 @@ See [docs/deployment.md](./docs/deployment.md) for Vercel + Railway deployment.
 
 ### Data Pipeline
 
-1. Build a Python data pipeline that can continuously extract cabin class flight features for target airline
-2. Build a lightweight LLM module using the existing codebase to search for the websites associated with target airline cabin class product features
-3. Extract the website URLs and extract the required data following the output schema provided. Use the existing prompt template as reference for good practice structure.
+1. Build a Python data pipeline that can continuously research cabin class flight features for target airlines
+2. Use Gemini with Google Search grounding to find credible sources and extract structured cabin benefits
+3. Return data following the `output.py` flight features schema. Use the EPD prompt template (`flight_features_research_prompt.py`) as reference.
 4. The data pipeline can be triggered manually by running the scripts from the terminal
 5. The flight features are extracted at the airline > cabin class level. Integrate the dataset extracted with the existing database schema.
 

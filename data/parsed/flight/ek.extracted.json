@@ -1,0 +1,96 @@
+{
+  "cabins": {
+    "first": {
+      "cabin_class": "First",
+      "check_in_priority": "Yes",
+      "cabin_bag_pieces": 2,
+      "cabin_bag_kg_per_piece": 7,
+      "cabin_bag_kg_total": null,
+      "checked_bag_pieces": 2,
+      "checked_bag_kg_per_piece": 32,
+      "checked_bag_kg_total": null,
+      "boarding_priority": "Yes",
+      "lounge_access": "Yes",
+      "amenity_kit": [
+        "fragrance",
+        "aftershave balm",
+        "body lotion",
+        "lip balm",
+        "dental kit",
+        "deodorant",
+        "earplugs",
+        "foldaway hairbrush",
+        "compact mirror"
+      ],
+      "amenity_kit_brand": "Bulgari",
+      "extra_features": {}
+    },
+    "business": {
+      "cabin_class": "Business",
+      "check_in_priority": "Yes",
+      "cabin_bag_pieces": 2,
+      "cabin_bag_kg_per_piece": 7,
+      "cabin_bag_kg_total": null,
+      "checked_bag_pieces": 2,
+      "checked_bag_kg_per_piece": 32,
+      "checked_bag_kg_total": null,
+      "boarding_priority": "Yes",
+      "lounge_access": "Yes",
+      "amenity_kit": [
+        "fragrance",
+        "shaving balm",
+        "body lotion",
+        "lip balm",
+        "dental kit",
+        "deodorant",
+        "earplugs",
+        "foldaway hairbrush"
+      ],
+      "amenity_kit_brand": "Bulgari",
+      "extra_features": {}
+    },
+    "premium_economy": {
+      "cabin_class": "Premium Economy",
+      "check_in_priority": "Yes",
+      "cabin_bag_pieces": 1,
+      "cabin_bag_kg_per_piece": 10,
+      "cabin_bag_kg_total": null,
+      "checked_bag_pieces": 2,
+      "checked_bag_kg_per_piece": 23,
+      "checked_bag_kg_total": null,
+      "boarding_priority": "Yes",
+      "lounge_access": "No",
+      "amenity_kit": [
+        "soft socks",
+        "eyeshades",
+        "earplugs",
+        "dental kit",
+        "lip balm",
+        "hand relief moisturising cream",
+        "hydrating face lotion"
+      ],
+      "amenity_kit_brand": "Aveda",
+      "extra_features": {}
+    },
+    "economy": {
+      "cabin_class": "Economy",
+      "check_in_priority": "No",
+      "cabin_bag_pieces": 1,
+      "cabin_bag_kg_per_piece": 7,
+      "cabin_bag_kg_total": null,
+      "checked_bag_pieces": 1,
+      "checked_bag_kg_per_piece": 23,
+      "checked_bag_kg_total": null,
+      "boarding_priority": "No",
+      "lounge_access": "No",
+      "amenity_kit": [
+        "soft socks",
+        "eyeshades",
+        "earplugs",
+        "dental kit"
+      ],
+      "amenity_kit_brand": null,
+      "extra_features": {}
+    }
+  }
+}

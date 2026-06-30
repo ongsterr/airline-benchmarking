@@ -1,0 +1,206 @@
+{
+  "first": {
+    "cabin_class": "First",
+    "sources": [
+      {
+        "url": "https://www.emirates.com/uk/english/experience/cabin-features/first-class/",
+        "title": "First Class | Cabin Features | The Emirates Experience",
+        "publisher": "Emirates"
+      },
+      {
+        "url": "https://www.emirates.com/uk/english/experience/our-lounges/first-class-lounge/",
+        "title": "First Class lounge | Our lounges | The Emirates Experience",
+        "publisher": "Emirates"
+      },
+      {
+        "url": "https://www.emirates.com/uk/english/before-you-fly/baggage/checked-baggage/",
+        "title": "Checked baggage | Baggage | Before You Fly",
+        "publisher": "Emirates"
+      },
+      {
+        "url": "https://www.going.com/guides/emirates-first-class",
+        "title": "Everything to Know About the Emirates First Class Experience",
+        "publisher": "Going"
+      },
+      {
+        "url": "https://www.emirates.com/english/experience/seasonal-occasions/amenity-kits/",
+        "title": "Onboard comfort | Cabin Features | The Emirates Experience",
+        "publisher": "Emirates"
+      }
+    ],
+    "features": {
+      "check-in_priority": "Yes",
+      "cabin_bag_pieces": 2,
+      "cabin_bag_kg_per_piece": 7,
+      "cabin_bag_kg_total": null,
+      "checked_bag_pieces": 2,
+      "checked_bag_kg_per_piece": 32,
+      "checked_bag_kg_total": null,
+      "boarding_priority": "Yes",
+      "lounge_access": "Yes",
+      "amenity_kit": [
+        "fragrance",
+        "aftershave balm",
+        "body lotion",
+        "lip balm",
+        "dental kit",
+        "deodorant",
+        "earplugs",
+        "foldaway hairbrush",
+        "compact mirror"
+      ],
+      "amenity_kit_brand": "Bulgari"
+    }
+  },
+  "business": {
+    "cabin_class": "Business",
+    "sources": [
+      {
+        "url": "https://www.emirates.com/uk/english/experience/cabin-features/business-class/",
+        "title": "Business Class | Cabin Features | The Emirates Experience",
+        "publisher": "Emirates"
+      },
+      {
+        "url": "https://www.emirates.com/uk/english/before-you-fly/baggage/checked-baggage/",
+        "title": "Checked baggage | Baggage | Before You Fly",
+        "publisher": "Emirates"
+      },
+      {
+        "url": "https://www.emirates.com/uk/english/experience/our-lounges/business-class-lounge/",
+        "title": "Business Class lounge | Our lounges | The Emirates Experience",
+        "publisher": "Emirates"
+      },
+      {
+        "url": "https://simpleflying.com/emirates-business-class-benefits/",
+        "title": "What Are The Benefits Of Flying In Emirates' Business Class?",
+        "publisher": "Simple Flying"
+      },
+      {
+        "url": "https://www.going.com/guides/emirates-business-class-a380",
+        "title": "Emirates Business Class: Your Guide to Flying the A380",
+        "publisher": "Going"
+      }
+    ],
+    "features": {
+      "check-in_priority": "Yes",
+      "cabin_bag_pieces": 2,
+      "cabin_bag_kg_per_piece": 7,
+      "cabin_bag_kg_total": null,
+      "checked_bag_pieces": 2,
+      "checked_bag_kg_per_piece": 32,
+      "checked_bag_kg_total": null,
+      "boarding_priority": "Yes",
+      "lounge_access": "Yes",
+      "amenity_kit": [
+        "fragrance",
+        "shaving balm",
+        "body lotion",
+        "lip balm",
+        "dental kit",
+        "deodorant",
+        "earplugs",
+        "foldaway hairbrush"
+      ],
+      "amenity_kit_brand": "Bulgari"
+    }
+  },
+  "premium_economy": {
+    "cabin_class": "Premium Economy",
+    "sources": [
+      {
+        "url": "https://www.emirates.com/uk/english/experience/cabin-features/premium-economy-class/",
+        "title": "Premium Economy | Cabin Features | The Emirates Experience",
+        "publisher": "Emirates"
+      },
+      {
+        "url": "https://www.emirates.com/uk/english/before-you-fly/baggage/checked-baggage/",
+        "title": "Checked baggage | Baggage | Before You Fly",
+        "publisher": "Emirates"
+      },
+      {
+        "url": "https://www.emirates.com/ae/english/experience/seasonal-occasions/amenity-kits/",
+        "title": "Emirates launches new collection of keepsake amenity kits to highlight endangered species",
+        "publisher": "Emirates"
+      },
+      {
+        "url": "https://themidnightblueelephant.com/emirates-premium-economy/",
+        "title": "The Ins & Outs of flying Emirates Premium Economy.",
+        "publisher": "The Midnight Blue Elephant"
+      },
+      {
+        "url": "https://www.going.com/guides/emirates-premium-economy",
+        "title": "Emirates Premium Economy: What to Expect on Your Flight Now",
+        "publisher": "Going"
+      }
+    ],
+    "features": {
+      "check-in_priority": "Yes",
+      "cabin_bag_pieces": 1,
+      "cabin_bag_kg_per_piece": 10,
+      "cabin_bag_kg_total": null,
+      "checked_bag_pieces": 2,
+      "checked_bag_kg_per_piece": 23,
+      "checked_bag_kg_total": null,
+      "boarding_priority": "Yes",
+      "lounge_access": "No",
+      "amenity_kit": [
+        "soft socks",
+        "eyeshades",
+        "earplugs",
+        "dental kit",
+        "lip balm",
+        "hand relief moisturising cream",
+        "hydrating face lotion"
+      ],
+      "amenity_kit_brand": "Aveda"
+    }
+  },
+  "economy": {
+    "cabin_class": "Economy",
+    "sources": [
+      {
+        "url": "https://www.emirates.com/uk/english/experience/cabin-features/economy-class/",
+        "title": "Economy Class | Cabin Features | The Emirates Experience",
+        "publisher": "Emirates"
+      },
+      {
+        "url": "https://www.emirates.com/uk/english/before-you-fly/baggage/checked-baggage/",
+        "title": "Checked baggage | Baggage | Before You Fly",
+        "publisher": "Emirates"
+      },
+      {
+        "url": "https://www.emirates.com/uk/english/before-you-fly/check-in/",
+        "title": "How to check in for your Emirates flight to and from Dubai",
+        "publisher": "Emirates"
+      },
+      {
+        "url": "https://www.emirates.com/ae/english/experience/seasonal-occasions/amenity-kits/",
+        "title": "Emirates launches new collection of keepsake amenity kits to highlight endangered species",
+        "publisher": "Emirates"
+      },
+      {
+        "url": "https://upgradedpoints.com/travel/airlines/emirates-boarding-process/",
+        "title": "Emirates Boarding Process and Groups - Complete Guide",
+        "publisher": "Upgraded Points"
+      }
+    ],
+    "features": {
+      "check-in_priority": "No",
+      "cabin_bag_pieces": 1,
+      "cabin_bag_kg_per_piece": 7,
+      "cabin_bag_kg_total": null,
+      "checked_bag_pieces": 1,
+      "checked_bag_kg_per_piece": 23,
+      "checked_bag_kg_total": null,
+      "boarding_priority": "No",
+      "lounge_access": "No",
+      "amenity_kit": [
+        "soft socks",
+        "eyeshades",
+        "earplugs",
+        "dental kit"
+      ],
+      "amenity_kit_brand": null
+    }
+  }
+}

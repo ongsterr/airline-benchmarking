@@ -1,0 +1,217 @@
+{
+  "source": "llm",
+  "research_model": "gemini-2.5-pro",
+  "researched_at": "2026-06-30T17:36:34.946458+00:00",
+  "sources_by_cabin": {
+    "first": [
+      {
+        "url": "https://www.airindia.com/in/en/experience/on-board/travel-classes.html",
+        "cabin_keys": [
+          "first"
+        ],
+        "page_type": "general",
+        "title": "Travel Classes | Onboard Amenities | Experience Air India",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.airindia.com/in/en/prepare-to-travel/baggage/checked-baggage-allowance.html",
+        "cabin_keys": [
+          "first"
+        ],
+        "page_type": "baggage",
+        "title": "Checked Baggage Allowance | Prepare to Travel - Air India",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.paxinternational.com/inflight/2024/01/19/81505004/air-india-reveals-luxe-amenity-kits-and-range-of-inflight-comforts",
+        "cabin_keys": [
+          "first"
+        ],
+        "page_type": "cabin_product",
+        "title": "Air India reveals luxe amenity kits and range of inflight comforts",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.indianeagle.com/traveldiary/air-india-baggage-allowance-us-to-india-flights/",
+        "cabin_keys": [
+          "first"
+        ],
+        "page_type": "baggage",
+        "title": "What's Air India's Baggage Policy for US to India Travel in Economy, Business, Premium Economy?",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://onemileatatime.com/news/air-india-new-amenity-kits-bedding-tableware/",
+        "cabin_keys": [
+          "first"
+        ],
+        "page_type": "cabin_product",
+        "title": "Air India's New Amenity Kits, Bedding, Tableware, And IFE",
+        "source_type": "discovered"
+      }
+    ],
+    "business": [
+      {
+        "url": "https://www.airindia.com/in/en/experience/on-board/travel-classes.html",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "general",
+        "title": "Travel Classes | Onboard Amenities | Experience Air India",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.airindia.com/in/en/prepare-to-travel/baggage/checked-baggage-allowance.html",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "baggage",
+        "title": "Checked Baggage Allowance | Prepare to Travel - Air India",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.businessclass.com/airlines/air-india/review",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "general",
+        "title": "Review of Air India Business Class",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.indianeagle.com/traveldiary/air-india-baggage-allowance-us-to-india-flights/",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "baggage",
+        "title": "What's Air India's Baggage Policy for US to India Travel in Economy, Business, Premium Economy?",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://simpleflying.com/air-india-new-onboard-experience-amenity-kits-bedding-chinaware-cutlery-glassware/",
+        "cabin_keys": [
+          "business"
+        ],
+        "page_type": "cabin_product",
+        "title": "Exclusive New Amenity Kits: Air India Continues Refreshing Its Onboard Experience",
+        "source_type": "discovered"
+      }
+    ],
+    "premium_economy": [
+      {
+        "url": "https://www.airindia.com/in/en/experience/on-board/travel-classes.html",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "general",
+        "title": "Travel Classes | Onboard Amenities | Experience Air India",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.airindia.com/in/en/flying-with-us/experience-the-new-air-india-with-upgraded-cabins-comfort-and-service-on-board.html",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "cabin_product",
+        "title": "Experience the new Air India with upgraded cabins, comfort and service on board",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.airindia.com/in/en/prepare-to-travel/baggage/checked-baggage-allowance.html",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "baggage",
+        "title": "Checked Baggage Allowance | Prepare to Travel - Air India",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.paxinternational.com/inflight/2024/01/19/81505004/air-india-reveals-luxe-amenity-kits-and-range-of-inflight-comforts",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "cabin_product",
+        "title": "Air India reveals luxe amenity kits and range of inflight comforts",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.forbes.com/sites/ramseyqubein/2024/02/10/flying-first-class-in-air-indias-a350-business-class-suite/",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "cabin_product",
+        "title": "Flying First Class In Air India's A350 Business Class Suite",
+        "source_type": "discovered"
+      }
+    ],
+    "economy": [
+      {
+        "url": "https://www.airindia.com/in/en/experience/on-board/travel-classes.html",
+        "cabin_keys": [
+          "economy"
+        ],
+        "page_type": "general",
+        "title": "Travel Classes | Onboard Amenities | Experience Air India",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.airindia.com/in/en/prepare-to-travel/baggage/checked-baggage-allowance.html",
+        "cabin_keys": [
+          "economy"
+        ],
+        "page_type": "baggage",
+        "title": "Checked Baggage Allowance | Prepare to Travel - Air India",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.indianeagle.com/traveldiary/air-india-baggage-allowance-us-to-india-flights/",
+        "cabin_keys": [
+          "economy"
+        ],
+        "page_type": "baggage",
+        "title": "What's Air India's Baggage Policy for US to India Travel in Economy, Business, Premium Economy?",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.paxinternational.com/inflight/2024/01/19/81505004/air-india-reveals-luxe-amenity-kits-and-range-of-inflight-comforts",
+        "cabin_keys": [
+          "economy"
+        ],
+        "page_type": "cabin_product",
+        "title": "Air India reveals luxe amenity kits and range of inflight comforts",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.airindia.com/in/en/press-releases/press-releases-details.html?title=AIR-INDIA-TO-ELEVATE-INFLIGHT-EXPERIENCE-WITH-LUXE-TOUCHES-ON-INTERNATIONAL-FLIGHTS-FROM-MID-2024",
+        "cabin_keys": [
+          "economy"
+        ],
+        "page_type": "general",
+        "title": "AIR INDIA TO ELEVATE INFLIGHT EXPERIENCE WITH LUXE TOUCHES ON INTERNATIONAL FLIGHTS FROM MID-2024",
+        "source_type": "discovered"
+      }
+    ]
+  },
+  "grounding_queries": [
+    "Air India first class benefits",
+    "Air India first class baggage allowance",
+    "Air India first class lounge access",
+    "Air India first class amenity kit",
+    "Air India first class check-in boarding",
+    "Air India business class benefits",
+    "Air India business class baggage allowance",
+    "Air India business class lounge access",
+    "Air India business class amenity kit",
+    "Air India business class check-in boarding",
+    "Air India premium economy benefits",
+    "Air India premium economy baggage allowance",
+    "Air India premium economy lounge access",
+    "Air India premium economy amenity kit",
+    "Air India premium economy check-in boarding",
+    "Air India economy class benefits",
+    "Air India economy class baggage allowance",
+    "Air India economy class lounge access",
+    "Air India economy class amenity kit",
+    "Air India economy class check-in boarding"
+  ]
+}

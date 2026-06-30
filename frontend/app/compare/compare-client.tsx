@@ -57,6 +57,7 @@ function isDifferent(values: Record<string, unknown>) {
 function buildDraftFromRows(rows: CompareRow[], svgId: string): DraftValues {
   const draft: DraftValues = {};
   for (const row of rows) {
+    if (row.scope === "flight") continue;
     draft[row.field_key] = row.values[svgId] ?? null;
   }
   return draft;
@@ -75,6 +76,7 @@ function buildUpdatePayload(
   const cabin: Record<string, string | number | boolean | null> = {};
 
   for (const row of rows) {
+    if (row.scope === "flight") continue;
     const initial = row.values[svgId] ?? null;
     const next = draft[row.field_key] ?? null;
     if (valuesEqual(initial, next)) continue;
@@ -268,6 +270,7 @@ export default function ComparePageClient() {
   const isDirty = useMemo(() => {
     if (!editingSvgId) return false;
     return rows.some((row) => {
+      if (row.scope === "flight") return false;
       const initial = row.values[editingSvgId] ?? null;
       const next = draft[row.field_key] ?? null;
       return !valuesEqual(initial, next);
@@ -333,7 +336,7 @@ export default function ComparePageClient() {
       <div className="space-y-6">
         <PageHeader
           eyebrow="Configuration analysis"
-          title="Configuration comparison"
+          title="Configuration Comparison"
           description="Select at least two configurations from the Fleet view."
         />
         <EmptyState message="Select at least 2 aircraft configurations from the Fleet view to compare." />
@@ -364,7 +367,7 @@ export default function ComparePageClient() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Configuration analysis"
-        title="Configuration comparison"
+        title="Configuration Comparison"
         description={`Comparing ${ids.length} aircraft configurations.`}
         actions={
           <div className="flex items-center gap-3">
@@ -461,7 +464,8 @@ export default function ComparePageClient() {
                       </TableCell>
                       {displayIds.map((id) => {
                         const isEditing = editingSvgId === id;
-                        const cellValue = isEditing
+                        const isFlightRow = row.scope === "flight";
+                        const cellValue = isEditing && !isFlightRow
                           ? (draft[row.field_key] ?? null)
                           : (row.values[id] ?? null);
                         const initialValue = row.values[id] ?? null;
@@ -478,7 +482,7 @@ export default function ComparePageClient() {
                               isEditing && "bg-primary/5"
                             )}
                           >
-                            {isEditing ? (
+                            {isEditing && !isFlightRow ? (
                               <CompareValueCell
                                 fieldKey={row.field_key}
                                 value={cellValue}
@@ -501,7 +505,7 @@ export default function ComparePageClient() {
                                 isEditing={false}
                                 isDirty={false}
                                 diff={diff}
-                                canEdit={canEdit}
+                                canEdit={canEdit && !isFlightRow}
                                 onStartEdit={() => startEditing(id)}
                                 onChange={() => {}}
                               />

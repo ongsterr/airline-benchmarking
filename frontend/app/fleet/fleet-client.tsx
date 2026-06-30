@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Download, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Download, Loader2, X } from "lucide-react";
 import { AirlineBadge } from "@/components/airline-badge";
 import { LoadingState, EmptyTableRow } from "@/components/loading-state";
 import { MultiSelectFilter } from "@/components/multi-select-filter";
@@ -39,7 +39,12 @@ import {
   getAirlineSummaries,
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { MAX_COMPARE_CONFIGS, MIN_COMPARE_CONFIGS } from "@/lib/constants";
+import {
+  FLEET_LOOKUP_LIMIT,
+  FLEET_PAGE_SIZE,
+  MAX_COMPARE_CONFIGS,
+  MIN_COMPARE_CONFIGS,
+} from "@/lib/constants";
 
 function parseIds(param: string | null): string[] {
   return param?.split(",").filter(Boolean) ?? [];
@@ -52,7 +57,10 @@ export default function FleetPageClient() {
 
   const [summaries, setSummaries] = useState<AirlineSummary[]>([]);
   const [items, setItems] = useState<AircraftListItem[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadMoreSentinelRef = useRef<HTMLTableRowElement>(null);
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(parseIds(searchParams.get("ids")))
   );
@@ -115,27 +123,89 @@ export default function FleetPageClient() {
     [pathname, router, searchParams]
   );
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await getAircraftList({
-        airline: selectedAirlines.length > 0 ? selectedAirlines : undefined,
-        aircraft_type:
-          selectedAircraftTypes.length > 0 ? selectedAircraftTypes : undefined,
-        search: search || undefined,
-        has_premium_economy: premiumEconomyOnly || undefined,
+  const listFilters = useMemo(
+    () => ({
+      airline: selectedAirlines.length > 0 ? selectedAirlines : undefined,
+      aircraft_type:
+        selectedAircraftTypes.length > 0 ? selectedAircraftTypes : undefined,
+      search: search || undefined,
+      has_premium_economy: premiumEconomyOnly || undefined,
+    }),
+    [selectedAirlines, selectedAircraftTypes, search, premiumEconomyOnly]
+  );
+
+  const hasMore = items.length < total;
+
+  const fetchPage = useCallback(
+    async (offset: number) => {
+      return getAircraftList({
+        ...listFilters,
+        offset,
+        limit: FLEET_PAGE_SIZE,
       });
-      setItems(data.items);
-    } catch {
-      setItems([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedAirlines, selectedAircraftTypes, search, premiumEconomyOnly]);
+    },
+    [listFilters]
+  );
 
   useEffect(() => {
-    load();
-  }, [load]);
+    let cancelled = false;
+    setLoading(true);
+    setItems([]);
+    setTotal(0);
+
+    fetchPage(0)
+      .then((data) => {
+        if (cancelled) return;
+        setItems(data.items);
+        setTotal(data.total);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setItems([]);
+        setTotal(0);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchPage]);
+
+  const loadMore = useCallback(async () => {
+    if (loading || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const data = await fetchPage(items.length);
+      setTotal(data.total);
+      setItems((prev) => {
+        const seen = new Set(prev.map((item) => item.svg_id));
+        const appended = data.items.filter((item) => !seen.has(item.svg_id));
+        return [...prev, ...appended];
+      });
+    } catch {
+      // Keep existing items on load-more failure.
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [fetchPage, hasMore, items.length, loading, loadingMore]);
+
+  useEffect(() => {
+    const sentinel = loadMoreSentinelRef.current;
+    if (!sentinel || loading || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          void loadMore();
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loadMore, loading, items.length]);
 
   useEffect(() => {
     setSelectedMeta((prev) => {
@@ -153,7 +223,7 @@ export default function FleetPageClient() {
     const ids = parseIds(idsParam);
     if (ids.length === 0) return;
 
-    getAircraftList()
+    getAircraftList({ limit: FLEET_LOOKUP_LIMIT })
       .then((data) => {
         setSelectedMeta((prev) => {
           const next = new Map(prev);
@@ -402,57 +472,91 @@ export default function FleetPageClient() {
                 message="No configurations found."
               />
             ) : (
-              items.map((item) => (
-                <TableRow key={item.svg_id} className={TABLE_ROW_CLASS}>
-                  <TableCell className={TABLE_CELL_CLASS}>
-                    <Checkbox
-                      checked={selected.has(item.svg_id)}
-                      onCheckedChange={() => toggleSelect(item)}
-                    />
-                  </TableCell>
-                  <TableCell className={TABLE_CELL_CLASS}>
-                    <AirlineBadge
-                      slug={item.airline_slug}
-                      name={item.airline_name}
-                    />
-                  </TableCell>
-                  <TableCell className={TABLE_CELL_CLASS}>
-                    {item.aircraft_type_displayed || "—"}
-                  </TableCell>
-                  <TableCell className={TABLE_CELL_CLASS}>
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-mono">{item.svg_id}</span>
-                      {item.is_dual_deck && (
-                        <Badge
-                          variant="secondary"
-                          className="h-4 px-1 text-[10px] font-normal"
+              <>
+                {items.map((item) => (
+                  <TableRow key={item.svg_id} className={TABLE_ROW_CLASS}>
+                    <TableCell className={TABLE_CELL_CLASS}>
+                      <Checkbox
+                        checked={selected.has(item.svg_id)}
+                        onCheckedChange={() => toggleSelect(item)}
+                      />
+                    </TableCell>
+                    <TableCell className={TABLE_CELL_CLASS}>
+                      <AirlineBadge
+                        slug={item.airline_slug}
+                        name={item.airline_name}
+                      />
+                    </TableCell>
+                    <TableCell className={TABLE_CELL_CLASS}>
+                      {item.aircraft_type_displayed || "—"}
+                    </TableCell>
+                    <TableCell className={TABLE_CELL_CLASS}>
+                      <div className="flex items-center gap-1.5">
+                        <Link
+                          href={`/aircraft/${item.svg_id}`}
+                          className={cn("font-mono", TABLE_LINK_CLASS)}
                         >
-                          Dual deck
-                        </Badge>
+                          {item.svg_id}
+                        </Link>
+                        {item.is_dual_deck && (
+                          <Badge
+                            variant="secondary"
+                            className="h-4 px-1 text-[10px] font-normal"
+                          >
+                            Dual deck
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className={TABLE_CELL_CLASS}>
+                      {item.configuration || "—"}
+                    </TableCell>
+                    <TableCell className={TABLE_CELL_NUMERIC_CLASS}>
+                      {item.total_seats ?? "—"}
+                    </TableCell>
+                    <TableCell className={TABLE_CELL_CLASS}>
+                      <a
+                        href={item.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={cn("font-mono", TABLE_LINK_CLASS)}
+                      >
+                        {item.svg_id}
+                      </a>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {hasMore && (
+                  <TableRow ref={loadMoreSentinelRef} className="hover:bg-transparent">
+                    <TableCell colSpan={7} className="py-3 text-center">
+                      {loadingMore ? (
+                        <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+                          <Loader2 className="size-3.5 animate-spin" />
+                          Loading more…
+                        </span>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs"
+                          onClick={() => void loadMore()}
+                        >
+                          Load more
+                        </Button>
                       )}
-                    </div>
-                  </TableCell>
-                  <TableCell className={TABLE_CELL_CLASS}>
-                    {item.configuration || "—"}
-                  </TableCell>
-                  <TableCell className={TABLE_CELL_NUMERIC_CLASS}>
-                    {item.total_seats ?? "—"}
-                  </TableCell>
-                  <TableCell className={TABLE_CELL_CLASS}>
-                    <a
-                      href={item.source_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={cn("font-mono", TABLE_LINK_CLASS)}
-                    >
-                      {item.svg_id}
-                    </a>
-                  </TableCell>
-                </TableRow>
-              ))
+                    </TableCell>
+                  </TableRow>
+                )}
+              </>
             )}
           </TableBody>
         </Table>
+        {!loading && total > 0 && (
+          <div className="border-t px-4 py-2 text-xs text-muted-foreground">
+            Showing {items.length} of {total} configurations
+          </div>
+        )}
       </SectionCard>
     </div>
   );

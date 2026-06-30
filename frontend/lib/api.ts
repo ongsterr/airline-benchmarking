@@ -35,6 +35,11 @@ export type AirlineSummary = {
   config_count: number;
   total_fleet_seats: number;
   aircraft_types: string[];
+  long_haul_count: number;
+  short_haul_count: number;
+  airbus_count: number;
+  boeing_count: number;
+  other_aircraft_count: number;
   last_pipeline_update: string | null;
 };
 
@@ -55,7 +60,7 @@ export type AircraftListItem = {
 export type CompareRow = {
   feature: string;
   field_key: string;
-  scope: "aircraft" | "cabin";
+  scope: "aircraft" | "cabin" | "flight";
   category: string;
   values: Record<string, string | number | boolean | null>;
 };
@@ -72,6 +77,64 @@ export type CompareConfigColumn = {
 
 export type CompareResponse = {
   columns: CompareConfigColumn[];
+  rows: CompareRow[];
+};
+
+export type CabinFlightFeatures = {
+  cabin_class: string;
+  check_in_priority: string | null;
+  cabin_bag_pieces: number | null;
+  cabin_bag_kg_per_piece: number | null;
+  cabin_bag_kg_total: number | null;
+  checked_bag_pieces: number | null;
+  checked_bag_kg_per_piece: number | null;
+  checked_bag_kg_total: number | null;
+  boarding_priority: string | null;
+  lounge_access: string | null;
+  amenity_kit: string[] | null;
+  amenity_kit_brand: string | null;
+  extra_features?: Record<string, unknown>;
+};
+
+export type AirlineFlightFeatures = {
+  cabins: Record<string, CabinFlightFeatures>;
+};
+
+export type AircraftDetail = AircraftListItem & {
+  svg_id: string;
+  airline_iata: string;
+  airline_name: string;
+  aircraft_type: string | null;
+  description: string | null;
+  ife_provider: string | null;
+  ife_system_name: string | null;
+  wifi_provider: string | null;
+  wifi_system_name: string | null;
+  cabins: Record<
+    string,
+    {
+      cabin_class: string;
+      num_seats: number;
+      layout: string | null;
+      pitch_inch: number | null;
+      width_inch: number | null;
+      seat_manufacturer: string | null;
+      has_flat_bed: boolean;
+      [key: string]: unknown;
+    }
+  >;
+  flight_features: AirlineFlightFeatures | null;
+  source_url?: string;
+};
+
+export type CompareAirlineColumn = {
+  slug: string;
+  iata_code: string | null;
+  name: string;
+};
+
+export type CompareAirlineResponse = {
+  columns: CompareAirlineColumn[];
   rows: CompareRow[];
 };
 
@@ -101,6 +164,8 @@ export async function getAircraftList(params?: {
   aircraft_type?: string | string[];
   search?: string;
   has_premium_economy?: boolean;
+  offset?: number;
+  limit?: number;
 }): Promise<{ items: AircraftListItem[]; total: number }> {
   const query = new URLSearchParams();
   if (params?.airline) {
@@ -118,6 +183,12 @@ export async function getAircraftList(params?: {
   if (params?.search) query.set("search", params.search);
   if (params?.has_premium_economy) {
     query.set("has_premium_economy", "true");
+  }
+  if (params?.offset !== undefined) {
+    query.set("offset", String(params.offset));
+  }
+  if (params?.limit !== undefined) {
+    query.set("limit", String(params.limit));
   }
   const qs = query.toString();
   return fetchApi(`/api/v1/aircraft${qs ? `?${qs}` : ""}`);
@@ -170,6 +241,19 @@ export async function getCompare(
   const query = new URLSearchParams({ ids: ids.join(",") });
   if (cabin) query.set("cabin", cabin);
   return fetchApi(`/api/v1/compare?${query}`);
+}
+
+export async function getAircraftDetail(svgId: string): Promise<AircraftDetail> {
+  return fetchApi(`/api/v1/aircraft/${encodeURIComponent(svgId)}`);
+}
+
+export async function getAirlineCompare(
+  slugs: string[],
+  cabin?: string
+): Promise<CompareAirlineResponse> {
+  const query = new URLSearchParams({ slugs: slugs.join(",") });
+  if (cabin) query.set("cabin", cabin);
+  return fetchApi(`/api/v1/compare/airlines?${query}`);
 }
 
 export async function updateAircraftConfig(

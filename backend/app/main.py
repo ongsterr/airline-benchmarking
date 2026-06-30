@@ -15,18 +15,21 @@ from backend.app.auth import (
 )
 
 from backend.app.config import settings
+from backend.app.db.migrate import ensure_flight_source_columns
 from backend.app.db.session import engine, get_db, init_schema
 from backend.app.models.entities import Base
 from backend.app.routers import aircraft as aircraft_router
 from backend.app.routers import airlines as airlines_router
 from backend.app.routers import compare as compare_router
 from backend.app.routers import export as export_router
+from backend.app.routers import flight_features as flight_features_router
 from shared.constants import MAX_COMPARE_CONFIGS
 from shared.schemas import (
     AircraftConfigUpdate,
-    AircraftConfiguration,
+    AircraftDetailResponse,
     AircraftListItem,
     AirlineSummary,
+    CompareAirlineResponse,
     CompareResponse,
 )
 
@@ -60,6 +63,7 @@ app.add_middleware(
 def on_startup() -> None:
     init_schema()
     Base.metadata.create_all(bind=engine)
+    ensure_flight_source_columns()
 
 
 @app.get("/health")
@@ -116,21 +120,23 @@ def list_aircraft(
     return {"items": items, "total": total}
 
 
-@app.get("/api/v1/aircraft/{svg_id}", response_model=AircraftConfiguration)
-def aircraft_detail(svg_id: str, db: Session = Depends(get_db)) -> AircraftConfiguration:
+@app.get("/api/v1/aircraft/{svg_id}", response_model=AircraftDetailResponse)
+def aircraft_detail(svg_id: str, db: Session = Depends(get_db)) -> AircraftDetailResponse:
     detail = aircraft_router.get_aircraft_detail(db, svg_id)
     if not detail:
         raise HTTPException(status_code=404, detail="Aircraft configuration not found")
-    return detail
+    slug = svg_id.split("-", 1)[0]
+    flight_features = flight_features_router.get_flight_features_for_slug(db, slug)
+    return AircraftDetailResponse(**detail.model_dump(), flight_features=flight_features)
 
 
-@app.patch("/api/v1/aircraft/{svg_id}", response_model=AircraftConfiguration)
+@app.patch("/api/v1/aircraft/{svg_id}", response_model=AircraftDetailResponse)
 def update_aircraft(
     svg_id: str,
     body: AircraftConfigUpdate,
     db: Session = Depends(get_db),
     _: None = Depends(require_edit_auth),
-) -> AircraftConfiguration:
+) -> AircraftDetailResponse:
     try:
         detail = aircraft_router.update_aircraft_config(db, svg_id, body)
         db.commit()
@@ -138,7 +144,9 @@ def update_aircraft(
         raise HTTPException(status_code=404, detail="Aircraft configuration not found") from None
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return detail
+    slug = svg_id.split("-", 1)[0]
+    flight_features = flight_features_router.get_flight_features_for_slug(db, slug)
+    return AircraftDetailResponse(**detail.model_dump(), flight_features=flight_features)
 
 
 @app.get("/api/v1/compare", response_model=CompareResponse)
@@ -156,6 +164,23 @@ def compare(
             detail=f"Maximum {MAX_COMPARE_CONFIGS} aircraft configs for comparison",
         )
     return compare_router.compare_aircraft(db, svg_ids, cabin=cabin)
+
+
+@app.get("/api/v1/compare/airlines", response_model=CompareAirlineResponse)
+def compare_airlines(
+    slugs: str = Query(..., description="Comma-separated airline slugs"),
+    cabin: str | None = Query(None, description="Cabin class key: first, business, premium_economy, economy"),
+    db: Session = Depends(get_db),
+) -> CompareAirlineResponse:
+    airline_slugs = [s.strip() for s in slugs.split(",") if s.strip()]
+    if len(airline_slugs) < 2:
+        raise HTTPException(status_code=400, detail="Provide at least 2 airline slugs to compare")
+    if len(airline_slugs) > MAX_COMPARE_CONFIGS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Maximum {MAX_COMPARE_CONFIGS} airlines for comparison",
+        )
+    return flight_features_router.compare_airlines(db, airline_slugs, cabin=cabin)
 
 
 @app.get("/api/v1/export.csv")

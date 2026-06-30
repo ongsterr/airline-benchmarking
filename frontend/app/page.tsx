@@ -49,7 +49,7 @@ export default async function SummaryPage() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Fleet intelligence"
-        title="Airline fleet summary"
+        title="Airline Fleet Summary"
         description="Overview Of Benchmarked Airlines And Fleet Scale."
       />
 
@@ -67,14 +67,28 @@ export default async function SummaryPage() {
               <TableHead className={cn(TABLE_HEAD_CLASS, "text-right")}>
                 Configurations
               </TableHead>
-              <TableHead className={TABLE_HEAD_CLASS}>Aircraft Types</TableHead>
+              <TableHead className={cn(TABLE_HEAD_CLASS, "text-right")}>
+                Long Haul Aircraft
+              </TableHead>
+              <TableHead className={cn(TABLE_HEAD_CLASS, "text-right")}>
+                Short Haul Aircraft
+              </TableHead>
+              <TableHead className={cn(TABLE_HEAD_CLASS, "text-right")}>
+                Airbus Aircraft
+              </TableHead>
+              <TableHead className={cn(TABLE_HEAD_CLASS, "text-right")}>
+                Boeing Aircraft
+              </TableHead>
+              <TableHead className={cn(TABLE_HEAD_CLASS, "text-right")}>
+                Other Aircraft
+              </TableHead>
               <TableHead className={TABLE_HEAD_CLASS}>Last Updated</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {summaries.length === 0 ? (
               <EmptyTableRow
-                colSpan={4}
+                colSpan={9}
                 message="No data yet. Run the pipeline to load aircraft configurations."
               />
             ) : (
@@ -91,13 +105,20 @@ export default async function SummaryPage() {
                   <TableCell className={TABLE_CELL_NUMERIC_CLASS}>
                     {airline.config_count}
                   </TableCell>
-                  <TableCell
-                    className={cn(
-                      TABLE_CELL_MUTED_CLASS,
-                      "max-w-xs truncate"
-                    )}
-                  >
-                    {airline.aircraft_types.join(", ") || "—"}
+                  <TableCell className={TABLE_CELL_NUMERIC_CLASS}>
+                    {airline.long_haul_count}
+                  </TableCell>
+                  <TableCell className={TABLE_CELL_NUMERIC_CLASS}>
+                    {airline.short_haul_count}
+                  </TableCell>
+                  <TableCell className={TABLE_CELL_NUMERIC_CLASS}>
+                    {airline.airbus_count}
+                  </TableCell>
+                  <TableCell className={TABLE_CELL_NUMERIC_CLASS}>
+                    {airline.boeing_count}
+                  </TableCell>
+                  <TableCell className={TABLE_CELL_NUMERIC_CLASS}>
+                    {airline.other_aircraft_count}
                   </TableCell>
                   <TableCell className={TABLE_CELL_MUTED_CLASS}>
                     {formatDate(airline.last_pipeline_update)}
