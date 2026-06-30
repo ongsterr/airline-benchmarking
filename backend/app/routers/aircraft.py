@@ -29,6 +29,12 @@ CABIN_TYPE_BY_KEY = {
 }
 
 
+def _parse_csv_param(value: str | None) -> list[str]:
+  if not value:
+    return []
+  return [part.strip() for part in value.split(",") if part.strip()]
+
+
 def list_aircraft(
   db: Session,
   airline: str | None = None,
@@ -41,10 +47,12 @@ def list_aircraft(
     db.query(AircraftConfiguration, Airline)
     .join(Airline, AircraftConfiguration.airline_id == Airline.id)
   )
-  if airline:
-    query = query.filter(Airline.slug == airline)
-  if aircraft_type:
-    query = query.filter(AircraftConfiguration.aircraft_type_displayed.ilike(f"%{aircraft_type}%"))
+  airlines = _parse_csv_param(airline)
+  if airlines:
+    query = query.filter(Airline.slug.in_(airlines))
+  aircraft_types = _parse_csv_param(aircraft_type)
+  if aircraft_types:
+    query = query.filter(AircraftConfiguration.aircraft_type_displayed.in_(aircraft_types))
   if search:
     group_id = func.coalesce(AircraftConfiguration.parent_svg_id, AircraftConfiguration.svg_id)
     query = query.filter(

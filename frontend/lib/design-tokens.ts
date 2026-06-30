@@ -5,6 +5,9 @@ export const CONTROL_WIDTH = {
   md: "w-44",
 } as const;
 
+export const TOOLBAR_CONTROL_CLASS =
+  "h-8 text-[11px] md:text-[11px] *:data-[slot=select-value]:text-[11px] md:*:data-[slot=select-value]:text-[11px]";
+
 export const TABLE_HEAD_CLASS =
   "h-8 text-xs font-medium text-muted-foreground";
 

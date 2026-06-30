@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { AirlineBadge } from "@/components/airline-badge";
 import { LoadingState, EmptyTableRow } from "@/components/loading-state";
+import { MultiSelectFilter } from "@/components/multi-select-filter";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import { TableToolbar } from "@/components/table-toolbar";
@@ -13,13 +14,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -35,6 +29,7 @@ import {
   TABLE_HEAD_CLASS,
   TABLE_LINK_CLASS,
   TABLE_ROW_CLASS,
+  TOOLBAR_CONTROL_CLASS,
 } from "@/lib/design-tokens";
 import {
   AircraftListItem,
@@ -62,8 +57,14 @@ export default function FleetPageClient() {
   const [selectedMeta, setSelectedMeta] = useState<
     Map<string, AircraftListItem>
   >(new Map());
-  const [airline, setAirline] = useState(searchParams.get("airline") || "all");
-  const [aircraftType, setAircraftType] = useState("all");
+  const [selectedAirlines, setSelectedAirlines] = useState<string[]>(() => {
+    const param = searchParams.get("airline");
+    if (!param || param === "all") return [];
+    return parseIds(param);
+  });
+  const [selectedAircraftTypes, setSelectedAircraftTypes] = useState<string[]>(
+    []
+  );
   const [search, setSearch] = useState("");
   const idsParam = searchParams.get("ids") || "";
 
@@ -74,6 +75,16 @@ export default function FleetPageClient() {
     }
     return Array.from(types).sort();
   }, [summaries]);
+
+  const airlineOptions = useMemo(
+    () => summaries.map((a) => ({ value: a.slug, label: a.name })),
+    [summaries]
+  );
+
+  const aircraftTypeOptions = useMemo(
+    () => aircraftTypes.map((t) => ({ value: t, label: t })),
+    [aircraftTypes]
+  );
 
   useEffect(() => {
     getAirlineSummaries()
@@ -104,8 +115,9 @@ export default function FleetPageClient() {
     setLoading(true);
     try {
       const data = await getAircraftList({
-        airline: airline === "all" ? undefined : airline,
-        aircraft_type: aircraftType === "all" ? undefined : aircraftType,
+        airline: selectedAirlines.length > 0 ? selectedAirlines : undefined,
+        aircraft_type:
+          selectedAircraftTypes.length > 0 ? selectedAircraftTypes : undefined,
         search: search || undefined,
       });
       setItems(data.items);
@@ -114,7 +126,7 @@ export default function FleetPageClient() {
     } finally {
       setLoading(false);
     }
-  }, [airline, aircraftType, search]);
+  }, [selectedAirlines, selectedAircraftTypes, search]);
 
   useEffect(() => {
     load();
@@ -189,42 +201,21 @@ export default function FleetPageClient() {
 
   const filters = (
     <TableToolbar>
-      <Select value={airline} onValueChange={(v) => v && setAirline(v)}>
-        <SelectTrigger className={cn("h-8 text-xs", CONTROL_WIDTH.sm)}>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all" className="text-xs">
-            All airlines
-          </SelectItem>
-          {summaries.map((a) => (
-            <SelectItem key={a.slug} value={a.slug} className="text-xs">
-              {a.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Select
-        value={aircraftType}
-        onValueChange={(v) => v && setAircraftType(v)}
-      >
-        <SelectTrigger className={cn("h-8 text-xs", CONTROL_WIDTH.sm)}>
-          <SelectValue placeholder="Aircraft type" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all" className="text-xs">
-            All types
-          </SelectItem>
-          {aircraftTypes.map((t) => (
-            <SelectItem key={t} value={t} className="text-xs">
-              {t}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <MultiSelectFilter
+        emptyLabel="All airlines"
+        options={airlineOptions}
+        selected={selectedAirlines}
+        onChange={setSelectedAirlines}
+      />
+      <MultiSelectFilter
+        emptyLabel="All types"
+        options={aircraftTypeOptions}
+        selected={selectedAircraftTypes}
+        onChange={setSelectedAircraftTypes}
+      />
       <Input
         placeholder="Search config..."
-        className={cn("h-8 text-xs", CONTROL_WIDTH.sm)}
+        className={cn(TOOLBAR_CONTROL_CLASS, CONTROL_WIDTH.sm)}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
@@ -240,10 +231,10 @@ export default function FleetPageClient() {
         actions={filters}
       />
 
-      {airline !== "all" && (
+      {selectedAirlines.length === 1 && (
         <p className="text-xs text-muted-foreground">
-          Select &ldquo;All airlines&rdquo; to compare configurations across
-          carriers.
+          Select multiple airlines (or clear the filter) to compare configurations
+          across carriers.
         </p>
       )}
 

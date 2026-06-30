@@ -9,7 +9,7 @@ type PageHeaderProps = {
 
 export function PageHeader({ eyebrow, title, description, actions }: PageHeaderProps) {
   return (
-    <div className="flex items-start justify-between gap-4">
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div className="min-w-0 space-y-1">
         <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
           {eyebrow}
@@ -20,7 +20,9 @@ export function PageHeader({ eyebrow, title, description, actions }: PageHeaderP
         )}
       </div>
       {actions && (
-        <div className="flex shrink-0 items-center gap-2">{actions}</div>
+        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+          {actions}
+        </div>
       )}
     </div>
   );

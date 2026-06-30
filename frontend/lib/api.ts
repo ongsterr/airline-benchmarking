@@ -77,13 +77,23 @@ export async function getAirlineSummaries(): Promise<AirlineSummary[]> {
 }
 
 export async function getAircraftList(params?: {
-  airline?: string;
-  aircraft_type?: string;
+  airline?: string | string[];
+  aircraft_type?: string | string[];
   search?: string;
 }): Promise<{ items: AircraftListItem[]; total: number }> {
   const query = new URLSearchParams();
-  if (params?.airline) query.set("airline", params.airline);
-  if (params?.aircraft_type) query.set("aircraft_type", params.aircraft_type);
+  if (params?.airline) {
+    const value = Array.isArray(params.airline)
+      ? params.airline.join(",")
+      : params.airline;
+    if (value) query.set("airline", value);
+  }
+  if (params?.aircraft_type) {
+    const value = Array.isArray(params.aircraft_type)
+      ? params.aircraft_type.join(",")
+      : params.aircraft_type;
+    if (value) query.set("aircraft_type", value);
+  }
   if (params?.search) query.set("search", params.search);
   const qs = query.toString();
   return fetchApi(`/api/v1/aircraft${qs ? `?${qs}` : ""}`);
