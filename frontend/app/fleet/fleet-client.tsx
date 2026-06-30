@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { X } from "lucide-react";
+import { Download, X } from "lucide-react";
 import { AirlineBadge } from "@/components/airline-badge";
 import { LoadingState, EmptyTableRow } from "@/components/loading-state";
 import { MultiSelectFilter } from "@/components/multi-select-filter";
@@ -34,6 +34,7 @@ import {
 import {
   AircraftListItem,
   AirlineSummary,
+  downloadFleetCsv,
   getAircraftList,
   getAirlineSummaries,
 } from "@/lib/api";
@@ -66,6 +67,7 @@ export default function FleetPageClient() {
     []
   );
   const [search, setSearch] = useState("");
+  const [exporting, setExporting] = useState(false);
   const idsParam = searchParams.get("ids") || "";
 
   const aircraftTypes = useMemo(() => {
@@ -178,7 +180,7 @@ export default function FleetPageClient() {
         return meta;
       });
       updateSelection(next);
-    } else if (selected.size < 4) {
+    } else {
       const next = new Set(selected);
       next.add(svgId);
       setSelectedMeta((prev) => new Map(prev).set(svgId, item));
@@ -198,6 +200,45 @@ export default function FleetPageClient() {
   };
 
   const compareUrl = `/compare?ids=${Array.from(selected).join(",")}`;
+  const visibleIds = useMemo(() => items.map((item) => item.svg_id), [items]);
+  const allVisibleSelected =
+    visibleIds.length > 0 && visibleIds.every((svgId) => selected.has(svgId));
+  const someVisibleSelected =
+    visibleIds.some((svgId) => selected.has(svgId)) && !allVisibleSelected;
+
+  const toggleSelectAllVisible = (checked: boolean) => {
+    const next = new Set(selected);
+    if (checked) {
+      for (const item of items) next.add(item.svg_id);
+      setSelectedMeta((prev) => {
+        const meta = new Map(prev);
+        for (const item of items) meta.set(item.svg_id, item);
+        return meta;
+      });
+    } else {
+      for (const item of items) next.delete(item.svg_id);
+      setSelectedMeta((prev) => {
+        const meta = new Map(prev);
+        for (const item of items) meta.delete(item.svg_id);
+        return meta;
+      });
+    }
+    updateSelection(next);
+  };
+
+  const handleDownloadCsv = async () => {
+    if (selected.size === 0 || exporting) return;
+    setExporting(true);
+    try {
+      await downloadFleetCsv(Array.from(selected));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to download CSV";
+      window.alert(message);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const filters = (
     <TableToolbar>
@@ -227,7 +268,7 @@ export default function FleetPageClient() {
       <PageHeader
         eyebrow="Fleet explorer"
         title="Fleet configurations"
-        description="Browse aircraft configurations and select up to four for comparison."
+        description="Browse aircraft configurations, export selected rows, and compare up to four at once."
         actions={filters}
       />
 
@@ -241,7 +282,7 @@ export default function FleetPageClient() {
       {selected.size > 0 && (
         <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
           <span className="text-xs text-muted-foreground">
-            {selected.size} of 4 selected
+            {selected.size} selected
           </span>
           {Array.from(selected).map((svgId) => {
             const meta = selectedMeta.get(svgId);
@@ -282,10 +323,19 @@ export default function FleetPageClient() {
               </Badge>
             );
           })}
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
             <Button
               size="sm"
-              disabled={selected.size < 2}
+              variant="outline"
+              disabled={exporting}
+              onClick={handleDownloadCsv}
+            >
+              <Download className="mr-1 h-3 w-3" />
+              {exporting ? "Exporting..." : "Download CSV"}
+            </Button>
+            <Button
+              size="sm"
+              disabled={selected.size < 2 || selected.size > 4}
               nativeButton={false}
               render={<Link href={compareUrl} />}
             >
@@ -294,12 +344,24 @@ export default function FleetPageClient() {
           </div>
         </div>
       )}
+      {selected.size > 4 && (
+        <p className="text-xs text-muted-foreground">
+          Compare supports up to 4 configs; refine your selection to compare.
+        </p>
+      )}
 
       <SectionCard title="Configurations">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className={cn(TABLE_HEAD_CLASS, "w-8")} />
+              <TableHead className={cn(TABLE_HEAD_CLASS, "w-8")}>
+                <Checkbox
+                  aria-label="Select all visible configurations"
+                  checked={allVisibleSelected || (someVisibleSelected && "indeterminate")}
+                  onCheckedChange={(checked) => toggleSelectAllVisible(Boolean(checked))}
+                  disabled={loading || items.length === 0}
+                />
+              </TableHead>
               <TableHead className={TABLE_HEAD_CLASS}>Airline</TableHead>
               <TableHead className={TABLE_HEAD_CLASS}>Aircraft type</TableHead>
               <TableHead className={TABLE_HEAD_CLASS}>Config ID</TableHead>
@@ -325,9 +387,6 @@ export default function FleetPageClient() {
                     <Checkbox
                       checked={selected.has(item.svg_id)}
                       onCheckedChange={() => toggleSelect(item)}
-                      disabled={
-                        !selected.has(item.svg_id) && selected.size >= 4
-                      }
                     />
                   </TableCell>
                   <TableCell className={TABLE_CELL_CLASS}>

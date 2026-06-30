@@ -119,3 +119,28 @@ export async function updateAircraftConfig(
     cache: "no-store",
   });
 }
+
+export async function downloadFleetCsv(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const query = new URLSearchParams({ ids: ids.join(",") });
+  const res = await fetch(`${API_URL}/api/v1/export.csv?${query.toString()}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`API error ${res.status}: ${body || "download csv failed"}`);
+  }
+
+  const blob = await res.blob();
+  const disposition = res.headers.get("content-disposition") || "";
+  const fileNameMatch = disposition.match(/filename="([^"]+)"/i);
+  const filename = fileNameMatch?.[1] || "fleet-export.csv";
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.URL.revokeObjectURL(url);
+}

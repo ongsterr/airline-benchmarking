@@ -1,6 +1,6 @@
 """FastAPI application entry point."""
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
@@ -10,6 +10,7 @@ from backend.app.models.entities import Base
 from backend.app.routers import aircraft as aircraft_router
 from backend.app.routers import airlines as airlines_router
 from backend.app.routers import compare as compare_router
+from backend.app.routers import export as export_router
 from shared.schemas import (
     AircraftConfigUpdate,
     AircraftConfiguration,
@@ -98,3 +99,19 @@ def compare(
     if len(svg_ids) > 4:
         raise HTTPException(status_code=400, detail="Maximum 4 aircraft configs for comparison")
     return compare_router.compare_aircraft(db, svg_ids, cabin=cabin)
+
+
+@app.get("/api/v1/export.csv")
+def export_csv(
+    ids: str = Query(..., description="Comma-separated svg_ids"),
+    db: Session = Depends(get_db),
+) -> Response:
+    svg_ids = [s.strip() for s in ids.split(",") if s.strip()]
+    if not svg_ids:
+        raise HTTPException(status_code=400, detail="Provide at least 1 aircraft id to export")
+    content, filename = export_router.build_export_csv(svg_ids, db)
+    return Response(
+        content=content,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
