@@ -25,7 +25,11 @@ import { cn } from "@/lib/utils";
 
 function formatDate(iso: string | null) {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString();
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(iso));
 }
 
 export default async function SummaryPage() {
@@ -37,23 +41,22 @@ export default async function SummaryPage() {
   }
 
   const totalConfigs = summaries.reduce((s, a) => s + a.config_count, 0);
-  const totalSeats = summaries.reduce((s, a) => s + a.total_fleet_seats, 0);
+  const uniqueAircraftTypes = new Set(
+    summaries.flatMap((a) => a.aircraft_types)
+  ).size;
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Fleet intelligence"
         title="Airline fleet summary"
-        description="Overview of benchmarked airlines and fleet scale."
+        description="Overview Of Benchmarked Airlines And Fleet Scale."
       />
 
       <div className="grid gap-3 sm:grid-cols-3">
         <MetricCard title="Airlines" value={summaries.length} />
         <MetricCard title="Configurations" value={totalConfigs} />
-        <MetricCard
-          title="Total fleet seats"
-          value={totalSeats.toLocaleString()}
-        />
+        <MetricCard title="Unique Aircraft Types" value={uniqueAircraftTypes} />
       </div>
 
       <SectionCard title="Airlines">
@@ -62,10 +65,10 @@ export default async function SummaryPage() {
             <TableRow className="hover:bg-transparent">
               <TableHead className={TABLE_HEAD_CLASS}>Airline</TableHead>
               <TableHead className={cn(TABLE_HEAD_CLASS, "text-right")}>
-                Configs
+                Configurations
               </TableHead>
-              <TableHead className={TABLE_HEAD_CLASS}>Aircraft types</TableHead>
-              <TableHead className={TABLE_HEAD_CLASS}>Last updated</TableHead>
+              <TableHead className={TABLE_HEAD_CLASS}>Aircraft Types</TableHead>
+              <TableHead className={TABLE_HEAD_CLASS}>Last Updated</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
