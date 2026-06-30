@@ -130,6 +130,11 @@ class AirlineSummary(BaseModel):
     last_pipeline_update: datetime | None = None
 
 
+class AircraftFilterOptions(BaseModel):
+    haul_types: list[str] = Field(default_factory=list)
+    manufacturers: list[str] = Field(default_factory=list)
+
+
 class AircraftListItem(BaseModel):
     svg_id: str
     airline_slug: str

@@ -267,7 +267,8 @@ Base URL: `http://localhost:8000`
 | `GET /api/v1/auth/me` | Compare edit | `{ authenticated }` — validates Bearer token; returns `authenticated: true` when edit auth disabled |
 | `POST /api/v1/auth/logout` | Compare edit | No-op server-side; client clears token |
 | `GET /api/v1/airlines/summary` | Summary | Per-airline: fleet count, haul/manufacturer breakdown, aircraft types, last pipeline update |
-| `GET /api/v1/aircraft` | Fleet detail | Grouped list (dual-deck merged); query params: `airline` and `aircraft_type` (comma-separated multi-value), `search`, `has_premium_economy=true`, `offset`, `limit` |
+| `GET /api/v1/aircraft` | Fleet detail | Grouped list (dual-deck merged); query params: `airline` and `aircraft_type` (comma-separated multi-value), `haul_type`, `manufacturer`, `search`, `has_premium_economy=true`, `offset`, `limit` |
+| `GET /api/v1/aircraft/filter-options` | Fleet filters | Canonical `haul_types` and distinct `manufacturers` for Fleet multi-select filters |
 | `GET /api/v1/aircraft/{svg_id}` | Detail drill-down | `AircraftDetailResponse`: grouped aircraft + cabins + `flight_features` |
 | `GET /api/v1/compare?ids=ek-359g,ba-19a&cabin=business` | Compare | `CompareResponse`: hardware + flight feature rows (`scope=flight`); 2–8 configs |
 | `GET /api/v1/compare/airlines?slugs=ek,ba&cabin=business` | Airline compare | `CompareAirlineResponse`: flight benefits across 2–8 airlines; includes **Reference URL** row (`field_key=source_url`) |
@@ -351,6 +352,8 @@ flowchart LR
 - `PageHeader` with `TableToolbar` filters in actions slot:
   - **Airline** — `MultiSelectFilter` from `GET /api/v1/airlines/summary` (empty = all airlines; comma-separated slugs in API)
   - **Aircraft type** — `MultiSelectFilter` over union of summary `aircraft_types`
+  - **Haul type** — `MultiSelectFilter` from `GET /api/v1/aircraft/filter-options` (`Long Haul` / `Short Haul`; case-insensitive substring match in API)
+  - **Manufacturer** — `MultiSelectFilter` over distinct DB manufacturers from filter-options endpoint
   - **Premium economy** — checkbox → `has_premium_economy=true` (configs with W seats > 0)
   - **Search** — free text against group `svg_id`, code, type, and seat layout
 - Hint when exactly one airline is selected: prompt user to clear or multi-select for cross-carrier comparison
@@ -513,6 +516,7 @@ Record notable architecture, schema, API, and deployment changes here (newest fi
 |------|--------|
 | 2026-06-30 | Airline Cabin Comparison polish: dedicated **Airlines** filter card, `table-fixed` wrapping columns (`COMPARE_AIRLINE_COLUMN_CLASS`), left-aligned cells, **Reference URL** row + link rendering, column edit via `PATCH /api/v1/airlines/{slug}/flight-features`, `FlightCompareValueCell`, `shared/flight_fields.py` — KD-025, KD-026 |
 | 2026-06-30 | Fleet infinite scroll: `FLEET_PAGE_SIZE`, `offset`/`limit` in `getAircraftList`, `IntersectionObserver` load-more, `Showing N of total` footer — KD-023 |
+| 2026-06-30 | Fleet haul type and manufacturer filters: `GET /api/v1/aircraft/filter-options`, `haul_type` / `manufacturer` query params on aircraft list |
 | 2026-06-30 | Airline summary: haul/manufacturer count columns; nav labels (Airline, Compare Aircraft, Compare Airline, Features Comparison); `AirlineCompareSelector` chip picker |
 | 2026-06-30 | Pipeline: `get_or_create_airline` preserves display names when flight load passes code-like fallback (`tests/test_airline_upsert.py`) — KD-024 |
 | 2026-06-30 | Flight features: LLM-first research via `flight_research.py` + Google Search grounding; removed HTML discover/fetch/clean pipeline; EPD `flight_features_research_prompt.py`; per-cabin sources in LLM JSON + `flight_feature_sources` DB |

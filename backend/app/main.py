@@ -27,6 +27,7 @@ from shared.constants import MAX_COMPARE_CONFIGS
 from shared.schemas import (
     AircraftConfigUpdate,
     AircraftDetailResponse,
+    AircraftFilterOptions,
     AircraftListItem,
     AirlineFlightFeaturesUpdate,
     AirlineSummary,
@@ -104,6 +105,8 @@ def airline_summary(db: Session = Depends(get_db)) -> list[AirlineSummary]:
 def list_aircraft(
     airline: str | None = None,
     aircraft_type: str | None = None,
+    haul_type: str | None = None,
+    manufacturer: str | None = None,
     search: str | None = None,
     has_premium_economy: bool | None = None,
     offset: int = Query(0, ge=0),
@@ -114,12 +117,19 @@ def list_aircraft(
         db,
         airline=airline,
         aircraft_type=aircraft_type,
+        haul_type=haul_type,
+        manufacturer=manufacturer,
         search=search,
         has_premium_economy=has_premium_economy,
         offset=offset,
         limit=limit,
     )
     return {"items": items, "total": total}
+
+
+@app.get("/api/v1/aircraft/filter-options", response_model=AircraftFilterOptions)
+def aircraft_filter_options(db: Session = Depends(get_db)) -> AircraftFilterOptions:
+    return aircraft_router.get_aircraft_filter_options(db)
 
 
 @app.get("/api/v1/aircraft/{svg_id}", response_model=AircraftDetailResponse)

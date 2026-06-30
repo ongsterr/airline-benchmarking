@@ -19,7 +19,9 @@ from backend.app.routers.aircraft_grouping import (
 from shared.compare_fields import AIRCRAFT_FIELDS, CABIN_FIELDS, coerce_field_value
 from shared.schemas import AircraftConfigUpdate
 from shared.schemas import AircraftConfiguration as AircraftSchema
-from shared.schemas import AircraftListItem, SeatCounts, SeatRatingSummary, WifiInfo
+from shared.schemas import AircraftFilterOptions, AircraftListItem, SeatCounts, SeatRatingSummary, WifiInfo
+
+CANONICAL_HAUL_TYPES = ["Long Haul", "Short Haul"]
 
 CABIN_TYPE_BY_KEY = {
     "first": "F",
@@ -35,10 +37,49 @@ def _parse_csv_param(value: str | None) -> list[str]:
   return [part.strip() for part in value.split(",") if part.strip()]
 
 
+def _haul_type_conditions(haul_types: list[str]) -> list:
+  conditions = []
+  for haul_type in haul_types:
+    haul = haul_type.lower()
+    if "long" in haul:
+      conditions.append(func.lower(AircraftConfiguration.haul_type).like("%long%"))
+    elif "short" in haul:
+      conditions.append(func.lower(AircraftConfiguration.haul_type).like("%short%"))
+    else:
+      conditions.append(func.lower(AircraftConfiguration.haul_type) == haul)
+  return conditions
+
+
+def _manufacturer_conditions(manufacturers: list[str]) -> list:
+  return [
+    func.lower(AircraftConfiguration.manufacturer) == manufacturer.lower()
+    for manufacturer in manufacturers
+  ]
+
+
+def get_aircraft_filter_options(db: Session) -> AircraftFilterOptions:
+  rows = (
+    db.query(AircraftConfiguration.manufacturer)
+    .filter(AircraftConfiguration.manufacturer.isnot(None))
+    .distinct()
+    .all()
+  )
+  manufacturers = sorted(
+    {row[0] for row in rows if row[0]},
+    key=str.casefold,
+  )
+  return AircraftFilterOptions(
+    haul_types=list(CANONICAL_HAUL_TYPES),
+    manufacturers=manufacturers,
+  )
+
+
 def list_aircraft(
   db: Session,
   airline: str | None = None,
   aircraft_type: str | None = None,
+  haul_type: str | None = None,
+  manufacturer: str | None = None,
   search: str | None = None,
   has_premium_economy: bool | None = None,
   offset: int = 0,
@@ -54,6 +95,12 @@ def list_aircraft(
   aircraft_types = _parse_csv_param(aircraft_type)
   if aircraft_types:
     query = query.filter(AircraftConfiguration.aircraft_type_displayed.in_(aircraft_types))
+  haul_types = _parse_csv_param(haul_type)
+  if haul_types:
+    query = query.filter(or_(*_haul_type_conditions(haul_types)))
+  manufacturers = _parse_csv_param(manufacturer)
+  if manufacturers:
+    query = query.filter(or_(*_manufacturer_conditions(manufacturers)))
   if search:
     group_id = func.coalesce(AircraftConfiguration.parent_svg_id, AircraftConfiguration.svg_id)
     query = query.filter(

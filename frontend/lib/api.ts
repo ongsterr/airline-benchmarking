@@ -43,6 +43,11 @@ export type AirlineSummary = {
   last_pipeline_update: string | null;
 };
 
+export type AircraftFilterOptions = {
+  haul_types: string[];
+  manufacturers: string[];
+};
+
 export type AircraftListItem = {
   svg_id: string;
   airline_slug: string;
@@ -164,9 +169,15 @@ export async function getAirlineSummaries(): Promise<AirlineSummary[]> {
   return fetchApi("/api/v1/airlines/summary");
 }
 
+export async function getAircraftFilterOptions(): Promise<AircraftFilterOptions> {
+  return fetchApi("/api/v1/aircraft/filter-options");
+}
+
 export async function getAircraftList(params?: {
   airline?: string | string[];
   aircraft_type?: string | string[];
+  haul_type?: string | string[];
+  manufacturer?: string | string[];
   search?: string;
   has_premium_economy?: boolean;
   offset?: number;
@@ -184,6 +195,18 @@ export async function getAircraftList(params?: {
       ? params.aircraft_type.join(",")
       : params.aircraft_type;
     if (value) query.set("aircraft_type", value);
+  }
+  if (params?.haul_type) {
+    const value = Array.isArray(params.haul_type)
+      ? params.haul_type.join(",")
+      : params.haul_type;
+    if (value) query.set("haul_type", value);
+  }
+  if (params?.manufacturer) {
+    const value = Array.isArray(params.manufacturer)
+      ? params.manufacturer.join(",")
+      : params.manufacturer;
+    if (value) query.set("manufacturer", value);
   }
   if (params?.search) query.set("search", params.search);
   if (params?.has_premium_economy) {

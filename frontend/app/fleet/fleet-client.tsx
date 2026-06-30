@@ -32,9 +32,11 @@ import {
   TOOLBAR_CONTROL_CLASS,
 } from "@/lib/design-tokens";
 import {
+  AircraftFilterOptions,
   AircraftListItem,
   AirlineSummary,
   downloadFleetCsv,
+  getAircraftFilterOptions,
   getAircraftList,
   getAirlineSummaries,
 } from "@/lib/api";
@@ -75,6 +77,14 @@ export default function FleetPageClient() {
   const [selectedAircraftTypes, setSelectedAircraftTypes] = useState<string[]>(
     []
   );
+  const [selectedHaulTypes, setSelectedHaulTypes] = useState<string[]>([]);
+  const [selectedManufacturers, setSelectedManufacturers] = useState<string[]>(
+    []
+  );
+  const [filterOptions, setFilterOptions] = useState<AircraftFilterOptions>({
+    haul_types: [],
+    manufacturers: [],
+  });
   const [search, setSearch] = useState("");
   const [premiumEconomyOnly, setPremiumEconomyOnly] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -98,10 +108,31 @@ export default function FleetPageClient() {
     [aircraftTypes]
   );
 
+  const haulTypeOptions = useMemo(
+    () =>
+      filterOptions.haul_types.map((haulType) => ({
+        value: haulType,
+        label: haulType,
+      })),
+    [filterOptions.haul_types]
+  );
+
+  const manufacturerOptions = useMemo(
+    () =>
+      filterOptions.manufacturers.map((manufacturer) => ({
+        value: manufacturer,
+        label: manufacturer,
+      })),
+    [filterOptions.manufacturers]
+  );
+
   useEffect(() => {
     getAirlineSummaries()
       .then(setSummaries)
       .catch(() => setSummaries([]));
+    getAircraftFilterOptions()
+      .then(setFilterOptions)
+      .catch(() => setFilterOptions({ haul_types: [], manufacturers: [] }));
   }, []);
 
   useEffect(() => {
@@ -128,10 +159,20 @@ export default function FleetPageClient() {
       airline: selectedAirlines.length > 0 ? selectedAirlines : undefined,
       aircraft_type:
         selectedAircraftTypes.length > 0 ? selectedAircraftTypes : undefined,
+      haul_type: selectedHaulTypes.length > 0 ? selectedHaulTypes : undefined,
+      manufacturer:
+        selectedManufacturers.length > 0 ? selectedManufacturers : undefined,
       search: search || undefined,
       has_premium_economy: premiumEconomyOnly || undefined,
     }),
-    [selectedAirlines, selectedAircraftTypes, search, premiumEconomyOnly]
+    [
+      selectedAirlines,
+      selectedAircraftTypes,
+      selectedHaulTypes,
+      selectedManufacturers,
+      search,
+      premiumEconomyOnly,
+    ]
   );
 
   const hasMore = items.length < total;
@@ -332,6 +373,18 @@ export default function FleetPageClient() {
         options={aircraftTypeOptions}
         selected={selectedAircraftTypes}
         onChange={setSelectedAircraftTypes}
+      />
+      <MultiSelectFilter
+        emptyLabel="All haul types"
+        options={haulTypeOptions}
+        selected={selectedHaulTypes}
+        onChange={setSelectedHaulTypes}
+      />
+      <MultiSelectFilter
+        emptyLabel="All manufacturers"
+        options={manufacturerOptions}
+        selected={selectedManufacturers}
+        onChange={setSelectedManufacturers}
       />
       <label className="flex h-8 items-center gap-1.5 px-1 text-[11px] text-muted-foreground">
         <Checkbox
