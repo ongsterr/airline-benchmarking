@@ -201,7 +201,7 @@ Base URL: `http://localhost:8000`
 | `GET /api/v1/airlines/summary` | Summary | Per-airline: fleet count, total seats, aircraft type breakdown, avg seat ratings |
 | `GET /api/v1/aircraft` | Fleet detail | Paginated compact list with `source_url`; query params: `airline`, `aircraft_type`, `search` (matches `svg_id`, `aircraft_code_displayed`, `aircraft_type_displayed`, `configuration`) |
 | `GET /api/v1/aircraft/{svg_id}` | Detail drill-down | Full aircraft + cabins |
-| `GET /api/v1/compare?ids=ek-359g,ba-19a&cabin=business` | Compare | `CompareResponse`: `columns` (config metadata per `svg_id`) + `rows` (pivoted feature matrix with `field_key`, `scope`, raw `values`); 2–4 configs |
+| `GET /api/v1/compare?ids=ek-359g,ba-19a&cabin=business` | Compare | `CompareResponse`: `columns` (config metadata per `svg_id`) + `rows` (pivoted feature matrix with `field_key`, `scope`, raw `values`); 2–8 configs |
 | `PATCH /api/v1/aircraft/{svg_id}` | Compare edit | Partial update of compare-visible aircraft and cabin fields; body `{ aircraft: {...}, cabins: { business: {...} } }`; returns full `AircraftConfiguration` |
 
 **Compare response** (`shared/schemas.py`):
@@ -246,14 +246,14 @@ Fleet is the **primary selection surface**; Compare shows side-by-side results a
 ```mermaid
 flowchart LR
     Summary["Summary /"] -->|"optional ?airline="| Fleet["Fleet /fleet"]
-    Fleet -->|"checkbox 2-4 configs"| ChipsBar["Selected chips bar"]
+    Fleet -->|"checkbox 2-8 configs"| ChipsBar["Selected chips bar"]
     ChipsBar -->|"Compare → ?ids="| Compare["Compare /compare"]
     Compare -->|"Edit selection"| Fleet
 ```
 
 - **URL state:** selection is synced to `?ids=` on Fleet and Compare (e.g. `/fleet?ids=ek-359g,ba-19a&airline=all`)
 - **Cross-airline discovery:** use airline filter **All airlines** plus aircraft type filter or search (e.g. `A380`) to find like-for-like configs across carriers
-- **Limits:** 2–4 configs (enforced in Fleet UI and compare API)
+- **Limits:** 2–8 configs (enforced in Fleet UI and compare API)
 
 ### View 2 — Fleet detail (`/fleet`)
 
@@ -264,14 +264,14 @@ flowchart LR
 - Hint when a single airline is filtered: prompt user to switch to “All airlines” for cross-carrier comparison
 - `SectionCard` with compact `Table` of aircraft configurations
 - Columns: Airline, Aircraft Type, Config ID, Seat Layout, Seats, Ref URL (link to AeroLOPA `source_url`)
-- `Checkbox` row selection (max 4) → **selected configs bar** above the table:
+- `Checkbox` row selection (max 8) → **selected configs bar** above the table:
   - Removable chips: airline badge + aircraft type + config code
   - Counter (`N of 4 selected`) and **Compare** button (enabled at 2+)
   - Chip metadata cached in client state so labels persist when filters hide selected rows
 
 ### View 3 — Compare (`/compare`)
 
-- Requires `?ids=` with 2–4 comma-separated `svg_id`s (typically navigated from Fleet)
+- Requires `?ids=` with 2–8 comma-separated `svg_id`s (typically navigated from Fleet)
 - `PageHeader` with **Edit selection** link (back to `/fleet?ids=...`) and cabin `Tabs` (First / Business / Premium Economy / Economy)
 - `SectionCard` compare `Table`: rows = features; columns = selected configs
 - Column headers use `CompareResponse.columns` — airline badge, aircraft type, config code, layout, **Edit / Save / Cancel** for column edit mode

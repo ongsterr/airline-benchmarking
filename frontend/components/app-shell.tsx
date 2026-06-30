@@ -19,7 +19,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
+        <div className="mx-auto flex max-w-screen-2xl items-center justify-between px-6 py-3">
           <div>
             <h1 className="text-sm font-semibold tracking-tight">
               Flight Benchmarking
@@ -46,7 +46,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Tabs>
         </div>
       </header>
-      <main className="mx-auto max-w-7xl px-6 py-6">{children}</main>
+      <main className="mx-auto max-w-screen-2xl px-6 py-6">{children}</main>
     </div>
   );
 }

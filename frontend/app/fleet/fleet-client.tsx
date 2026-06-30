@@ -39,6 +39,7 @@ import {
   getAirlineSummaries,
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { MAX_COMPARE_CONFIGS, MIN_COMPARE_CONFIGS } from "@/lib/constants";
 
 function parseIds(param: string | null): string[] {
   return param?.split(",").filter(Boolean) ?? [];
@@ -181,6 +182,7 @@ export default function FleetPageClient() {
       });
       updateSelection(next);
     } else {
+      if (selected.size >= MAX_COMPARE_CONFIGS) return;
       const next = new Set(selected);
       next.add(svgId);
       setSelectedMeta((prev) => new Map(prev).set(svgId, item));
@@ -209,10 +211,15 @@ export default function FleetPageClient() {
   const toggleSelectAllVisible = (checked: boolean) => {
     const next = new Set(selected);
     if (checked) {
-      for (const item of items) next.add(item.svg_id);
+      for (const item of items) {
+        if (next.size >= MAX_COMPARE_CONFIGS) break;
+        next.add(item.svg_id);
+      }
       setSelectedMeta((prev) => {
         const meta = new Map(prev);
-        for (const item of items) meta.set(item.svg_id, item);
+        for (const item of items) {
+          if (next.has(item.svg_id)) meta.set(item.svg_id, item);
+        }
         return meta;
       });
     } else {
@@ -268,7 +275,7 @@ export default function FleetPageClient() {
       <PageHeader
         eyebrow="Fleet explorer"
         title="Fleet configurations"
-        description="Browse aircraft configurations, export selected rows, and compare up to four at once."
+        description="Browse aircraft configurations, export selected rows, and compare up to eight at once."
         actions={filters}
       />
 
@@ -335,7 +342,10 @@ export default function FleetPageClient() {
             </Button>
             <Button
               size="sm"
-              disabled={selected.size < 2 || selected.size > 4}
+              disabled={
+                selected.size < MIN_COMPARE_CONFIGS ||
+                selected.size > MAX_COMPARE_CONFIGS
+              }
               nativeButton={false}
               render={<Link href={compareUrl} />}
             >
@@ -344,9 +354,10 @@ export default function FleetPageClient() {
           </div>
         </div>
       )}
-      {selected.size > 4 && (
+      {selected.size > MAX_COMPARE_CONFIGS && (
         <p className="text-xs text-muted-foreground">
-          Compare supports up to 4 configs; refine your selection to compare.
+          Compare supports up to {MAX_COMPARE_CONFIGS} configs; refine your
+          selection to compare.
         </p>
       )}
 

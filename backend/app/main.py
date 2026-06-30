@@ -11,6 +11,7 @@ from backend.app.routers import aircraft as aircraft_router
 from backend.app.routers import airlines as airlines_router
 from backend.app.routers import compare as compare_router
 from backend.app.routers import export as export_router
+from shared.constants import MAX_COMPARE_CONFIGS
 from shared.schemas import (
     AircraftConfigUpdate,
     AircraftConfiguration,
@@ -96,8 +97,11 @@ def compare(
     svg_ids = [s.strip() for s in ids.split(",") if s.strip()]
     if len(svg_ids) < 2:
         raise HTTPException(status_code=400, detail="Provide at least 2 aircraft ids to compare")
-    if len(svg_ids) > 4:
-        raise HTTPException(status_code=400, detail="Maximum 4 aircraft configs for comparison")
+    if len(svg_ids) > MAX_COMPARE_CONFIGS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Maximum {MAX_COMPARE_CONFIGS} aircraft configs for comparison",
+        )
     return compare_router.compare_aircraft(db, svg_ids, cabin=cabin)
 
 
