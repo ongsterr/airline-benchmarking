@@ -18,6 +18,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import {
   CABINS,
+  COMPARE_AIRLINE_COLUMN_CLASS,
+  COMPARE_FEATURE_COLUMN_CLASS,
   TABLE_HEAD_CLASS,
   TABLE_LINK_CLASS,
   TABLE_ROW_CLASS,
@@ -168,12 +170,17 @@ export default function AircraftDetailClient({ svgId }: { svgId: string }) {
       </SectionCard>
 
       <SectionCard title="Cabin comparison">
-        <Table>
+        <Table className="table-fixed">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className={TABLE_HEAD_CLASS}>Feature</TableHead>
+              <TableHead className={cn(TABLE_HEAD_CLASS, COMPARE_FEATURE_COLUMN_CLASS)}>
+                Feature
+              </TableHead>
               {cabinKeys.map((key) => (
-                <TableHead key={key} className={cn(TABLE_HEAD_CLASS, "min-w-28")}>
+                <TableHead
+                  key={key}
+                  className={cn(TABLE_HEAD_CLASS, COMPARE_AIRLINE_COLUMN_CLASS)}
+                >
                   {CABINS.find((c) => c.key === key)?.label || key}
                 </TableHead>
               ))}
@@ -196,7 +203,9 @@ export default function AircraftDetailClient({ svgId }: { svgId: string }) {
                     </TableRow>
                   )}
                   <TableRow className={TABLE_ROW_CLASS}>
-                    <TableCell className="py-1.5 text-muted-foreground">
+                    <TableCell
+                      className={cn("py-1.5 text-muted-foreground", COMPARE_FEATURE_COLUMN_CLASS)}
+                    >
                       {row.field}
                     </TableCell>
                     {cabinKeys.map((key) => {
@@ -206,8 +215,15 @@ export default function AircraftDetailClient({ svgId }: { svgId: string }) {
                           ? formatFlightValue(raw)
                           : formatCompareValue(raw);
                       return (
-                        <TableCell key={key} className="py-1.5 tabular-nums">
-                          {display}
+                        <TableCell
+                          key={key}
+                          className={cn("py-1.5 tabular-nums", COMPARE_AIRLINE_COLUMN_CLASS)}
+                        >
+                          <div className="min-w-0 text-left">
+                            <span className="block whitespace-normal break-words [overflow-wrap:anywhere]">
+                              {display}
+                            </span>
+                          </div>
                         </TableCell>
                       );
                     })}
