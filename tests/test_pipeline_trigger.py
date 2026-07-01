@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import threading
+import time
 import uuid
 from datetime import datetime, timezone
 
@@ -179,6 +181,73 @@ def test_get_pipeline_run(client: TestClient, auth_enabled, monkeypatch) -> None
     assert data["status"] == "completed"
     assert data["configs_updated"] == 1
     assert data["configs_skipped"] == 1
+
+
+def test_get_pipeline_run_mid_progress(client: TestClient, auth_enabled, monkeypatch) -> None:
+    """Poll endpoint returns incremental counts while a run is still in progress."""
+    release = threading.Event()
+
+    def fake_execute(db, run_record, airlines, force=False, limit=0, skip_existing=False):
+        from pipeline.run_progress import flush_run_progress
+
+        run_record.configs_discovered = 3
+        run_record.configs_updated = 0
+        run_record.configs_skipped = 0
+        flush_run_progress(db, run_record)
+
+        run_record.configs_updated = 1
+        flush_run_progress(db, run_record)
+
+        release.wait(timeout=5)
+
+        run_record.configs_updated = 3
+        run_record.finished_at = datetime.now(timezone.utc)
+        flush_run_progress(db, run_record)
+
+    monkeypatch.setattr("backend.app.routers.pipeline.execute_hardware_pipeline", fake_execute)
+
+    token = _login(client)
+    trigger = client.post(
+        "/api/v1/pipeline/hardware",
+        json={"airlines": ["ek", "ba", "ai"]},
+        headers=_auth_headers(token),
+    )
+    assert trigger.status_code == 202
+    run_id = trigger.json()["id"]
+
+    mid_progress = None
+    for _ in range(40):
+        response = client.get(
+            f"/api/v1/pipeline/runs/{run_id}",
+            headers=_auth_headers(token),
+        )
+        assert response.status_code == 200
+        data = response.json()
+        if data["status"] == "running" and data["configs_updated"] == 1:
+            mid_progress = data
+            break
+        time.sleep(0.05)
+
+    assert mid_progress is not None, "Expected mid-run progress with configs_updated == 1"
+    assert mid_progress["configs_discovered"] == 3
+
+    release.set()
+
+    for _ in range(40):
+        response = client.get(
+            f"/api/v1/pipeline/runs/{run_id}",
+            headers=_auth_headers(token),
+        )
+        if response.json()["status"] != "running":
+            break
+        time.sleep(0.05)
+
+    final = client.get(
+        f"/api/v1/pipeline/runs/{run_id}",
+        headers=_auth_headers(token),
+    ).json()
+    assert final["status"] == "completed"
+    assert final["configs_updated"] == 3
 
 
 def test_get_active_pipeline_run(client: TestClient, auth_enabled) -> None:

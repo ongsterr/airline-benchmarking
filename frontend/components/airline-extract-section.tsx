@@ -1,17 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { PipelineProgressPanel } from "@/components/pipeline-progress-panel";
 import { PipelineTriggerButton } from "@/components/pipeline-trigger-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { parseAirlineSlugInput, validateAirlineSlugs } from "@/lib/airline-slugs";
 import { TOOLBAR_CONTROL_CLASS } from "@/lib/design-tokens";
 import { cn } from "@/lib/utils";
-
-const SLUG_PATTERN = /^[a-z0-9-]{2,20}$/;
-
-function normalizeSlug(value: string) {
-  return value.trim().toLowerCase();
-}
 
 type AirlineExtractSectionProps = {
   canTrigger: boolean;
@@ -28,11 +24,13 @@ export function AirlineExtractSection({
 }: AirlineExtractSectionProps) {
   const [slugInput, setSlugInput] = useState("");
 
-  const slug = useMemo(() => normalizeSlug(slugInput), [slugInput]);
-  const slugValid = slug.length > 0 && SLUG_PATTERN.test(slug);
-  const slugInvalid = slug.length > 0 && !slugValid;
-  const airlines = slugValid ? [slug] : [];
-  const canRun = canTrigger && slugValid;
+  const parsedSlugs = useMemo(() => parseAirlineSlugInput(slugInput), [slugInput]);
+  const { valid: airlines, invalid } = useMemo(
+    () => validateAirlineSlugs(parsedSlugs),
+    [parsedSlugs]
+  );
+  const hasInput = parsedSlugs.length > 0;
+  const canRun = canTrigger && airlines.length > 0 && invalid.length === 0;
 
   if (!isAuthLoading && !canTrigger) {
     return (
@@ -48,20 +46,22 @@ export function AirlineExtractSection({
   }
 
   return (
-    <div className="space-y-1.5 px-4 py-2">
+    <div className="space-y-2 px-4 py-2">
       <div className="flex flex-wrap items-end gap-2">
         <div className="space-y-0.5">
           <Input
-            placeholder="Slug (e.g. cx)"
+            placeholder="cx, sq, ek"
             value={slugInput}
             onChange={(e) => setSlugInput(e.target.value)}
-            className={cn(TOOLBAR_CONTROL_CLASS, "w-28 font-mono")}
+            className={cn(TOOLBAR_CONTROL_CLASS, "w-48 font-mono")}
             autoComplete="off"
             spellCheck={false}
-            aria-label="AeroLOPA airline slug"
+            aria-label="AeroLOPA airline slugs"
           />
-          {slugInvalid && (
-            <p className="text-[10px] text-destructive">Invalid slug</p>
+          {hasInput && invalid.length > 0 && (
+            <p className="text-[10px] text-destructive">
+              Invalid: {invalid.join(", ")}
+            </p>
           )}
         </div>
 
@@ -104,6 +104,8 @@ export function AirlineExtractSection({
           />
         </div>
       </div>
+
+      <PipelineProgressPanel onComplete={onComplete} />
     </div>
   );
 }

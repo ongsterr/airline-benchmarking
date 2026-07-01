@@ -19,6 +19,7 @@ from pipeline.fetch import fetch_config_html, load_cached_html
 from pipeline.load import get_existing_svg_ids, upsert_aircraft
 from pipeline.normalize import normalize_with_llm
 from pipeline.parse_json import extract_aircraft_json
+from pipeline.run_progress import flush_run_progress
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -92,6 +93,10 @@ def execute_hardware_pipeline(
     errors: list[str] = []
     updated = 0
     skipped = 0
+    run_record.configs_updated = updated
+    run_record.configs_skipped = skipped
+    run_record.errors = None
+    flush_run_progress(db, run_record)
 
     configs_to_process = all_configs[:limit] if limit > 0 else all_configs
     existing_svg_ids: set[str] = set()
@@ -105,6 +110,8 @@ def execute_hardware_pipeline(
             if skip_existing and not force and svg_id in existing_svg_ids:
                 logger.info("%s: skipped (already loaded)", svg_id)
                 skipped += 1
+                run_record.configs_skipped = skipped
+                flush_run_progress(db, run_record)
                 continue
 
             logger.info("Processing %s", svg_id)
@@ -124,9 +131,10 @@ def execute_hardware_pipeline(
                 logger.exception("Failed %s", svg_id)
                 errors.append(f"{svg_id}:{exc}")
 
-    run_record.configs_updated = updated
-    run_record.configs_skipped = skipped
-    run_record.errors = errors or None
+            run_record.configs_updated = updated
+            run_record.configs_skipped = skipped
+            run_record.errors = errors or None
+            flush_run_progress(db, run_record)
     run_record.finished_at = datetime.now(timezone.utc)
 
     logger.info("Done: %d updated, %d skipped (already loaded), %d errors", updated, skipped, len(errors))

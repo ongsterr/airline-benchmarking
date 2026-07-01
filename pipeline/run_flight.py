@@ -21,6 +21,7 @@ from pipeline.flight_research import (
     primary_source_url,
     research_flight_features,
 )
+from pipeline.run_progress import flush_run_progress
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -90,10 +91,18 @@ def execute_flight_pipeline(
     skipped = 0
     errors: list[str] = []
 
+    run_record.configs_discovered = len(airlines)
+    run_record.configs_updated = updated
+    run_record.configs_skipped = skipped
+    run_record.errors = None
+    flush_run_progress(db, run_record)
+
     for slug in airlines:
         if skip_existing and not force and airline_has_flight_features(db, slug):
             logger.info("%s: skipped (already loaded)", slug)
             skipped += 1
+            run_record.configs_skipped = skipped
+            flush_run_progress(db, run_record)
             continue
 
         logger.info("Researching flight features for %s", slug)
@@ -113,10 +122,11 @@ def execute_flight_pipeline(
             logger.exception("Failed %s", slug)
             errors.append(f"{slug}:{exc}")
 
-    run_record.configs_discovered = len(airlines)
-    run_record.configs_updated = updated
-    run_record.configs_skipped = skipped
-    run_record.errors = errors or None
+        run_record.configs_updated = updated
+        run_record.configs_skipped = skipped
+        run_record.errors = errors or None
+        flush_run_progress(db, run_record)
+
     run_record.finished_at = datetime.now(timezone.utc)
 
     logger.info("Done: %d updated, %d skipped, %d errors", updated, skipped, len(errors))

@@ -116,6 +116,10 @@ export function usePipelineRun() {
     };
   }, [startPolling, stopPolling]);
 
+  const clearLastResult = useCallback(() => {
+    setLastResult(null);
+  }, []);
+
   return {
     activeRun,
     lastResult,
@@ -125,5 +129,6 @@ export function usePipelineRun() {
     startHardware,
     startFlight,
     clearError: () => setError(null),
+    clearLastResult,
   };
 }
