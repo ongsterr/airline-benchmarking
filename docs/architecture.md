@@ -415,15 +415,15 @@ Fleet is the **primary selection surface** for aircraft compare; Compare Aircraf
 ```mermaid
 flowchart LR
     Summary["Airline summary /"] -->|"optional ?airline="| Fleet["Fleet /fleet"]
-    Fleet -->|"checkbox 2-8 configs"| ChipsBar["Selected chips bar"]
-    ChipsBar -->|"Compare → ?ids="| Compare["Compare Aircraft /compare"]
+    Fleet -->|"checkbox selection"| ChipsBar["Selected chips bar"]
+    ChipsBar -->|"Compare (2-8) → ?ids="| Compare["Compare Aircraft /compare"]
     ChipsBar -->|"Download CSV"| Export["export.csv"]
     Compare -->|"Edit selection"| Fleet
 ```
 
 - **URL state:** selection is synced to `?ids=` on Fleet and Compare Aircraft (e.g. `/fleet?ids=ek-359g,ba-19a&airline=all`)
 - **Cross-airline discovery:** use airline filter **All airlines** plus aircraft type filter or search (e.g. `A380`) to find like-for-like configs across carriers
-- **Limits:** 2–8 configs (`MAX_COMPARE_CONFIGS` in `shared/constants.py`; enforced in Fleet UI and compare API)
+- **Limits:** **Compare** 2–8 configs (`MAX_COMPARE_CONFIGS` in `shared/constants.py`; enforced on Compare button and `/api/v1/compare`). **CSV export** has no selection cap — Fleet checkboxes may select any number of configs; `GET /api/v1/export.csv` accepts all selected `svg_id`s (minimum 1).
 
 ### View 2 — Fleet detail (`/fleet`)
 
@@ -438,9 +438,10 @@ flowchart LR
 - `SectionCard` with compact `Table` of aircraft configurations (dual-deck rows merged; **Dual deck** badge when applicable)
 - Columns: checkbox, Airline, Aircraft Type, Config ID, Seat Layout, Seats, Ref URL (link to AeroLOPA `source_url`)
 - **Infinite scroll pagination:** API returns `{ items, total }` with `offset`/`limit` (default backend limit 100; frontend `FLEET_PAGE_SIZE=50`). Initial fetch resets list; `IntersectionObserver` on a sentinel row loads the next page and appends (deduped by `svg_id`). Footer: `Showing N of total configurations`. Filter changes reset pagination. Select-all-visible applies to **currently loaded** rows only.
-- `Checkbox` row selection (max 8) with **select all visible** header checkbox → **selected configs bar** above the table:
+- `Checkbox` row selection (unlimited for export) with **select all visible** header checkbox (tri-state: unchecked / indeterminate / all visible selected) → **selected configs bar** above the table:
   - Removable chips: airline badge + aircraft type + config code
-  - Counter (`N selected`), **Download CSV** (exports selected ids via `GET /api/v1/export.csv`), and **Compare** button (enabled at 2+)
+  - Counter (`N selected`), **Download CSV** (exports all selected ids via `GET /api/v1/export.csv`), and **Compare** button (enabled at 2–8 configs only; hint when `> 8` selected)
+  - Header select-all: when no visible rows are selected, selects all loaded visible rows; when any visible row is selected, deselects all loaded visible rows
   - Chip metadata cached in client state so labels persist when filters hide selected rows; URL `?ids=` hydration uses `limit=500` lookup when labels are missing
 
 ### View 3 — Compare Aircraft (`/compare`)
@@ -587,6 +588,7 @@ Track significant architectural choices here. When a decision is reversed, mark 
 | KD-026 | **Airline compare chip selector** — `AirlineCompareSelector` with URL-synced `?slugs=`; dedicated filter `SectionCard` above features table | Clear separation of airline pick vs cabin tabs; full-width chip row; table-only features card | MultiSelectFilter in page header; selector inside table card | 2026-06-30 |
 | KD-027 | **Authenticated pipeline triggers from UI** — `POST /api/v1/pipeline/*`, background thread + `pipeline_runs` poll; **Extract Airline** slug toolbar on View 1 (`skip_existing` false = extract, true = update); compare pages edit-only (no pipeline buttons) | Operators can add new AeroLOPA airlines without CLI; incremental update via same slug input; reuses edit auth | Checkbox bulk select; pipeline triggers on compare pages; job queue (Celery) | 2026-07-01 — partial **Superseded** by KD-028 (2026-07-01) |
 | KD-028 | **Multi-slug Extract Airline + live progress** — comma-separated slug input (`airline-slugs.ts`); shared `PipelineProgressPanel`; incremental `flush_run_progress` commits in `execute_*_pipeline` so poll responses update mid-run; hardware progress in configs, flight progress in airlines | Batch onboarding of multiple AeroLOPA airlines in one operator action; visible extraction progress without CLI log tailing | Per-slug sequential UI requests; progress panel only on completion | 2026-07-01 |
+| KD-029 | **Decoupled Fleet selection limits** — unlimited checkbox selection for CSV export; compare remains 2–8 (`MAX_COMPARE_CONFIGS` on Compare button and compare API only); select-all-visible toggles all loaded rows without compare cap; header checkbox bulk-deselects when any visible row is selected; tri-state `indeterminate` styling on shared `Checkbox` | Large CSV exports without artificial 8-config cap; compare guardrails unchanged; predictable select-all / clear-visible behaviour on paginated tables | Single 8-config cap for both export and compare; state-blind `onCheckedChange(Boolean)` on header checkbox | 2026-07-01 |
 | KD-014 | **Slim API DTOs** — no raw HTML or seat-level data in list/summary endpoints | Keeps fleet and summary views fast; detail endpoint for drill-down | Return full source payload everywhere | 2026-06-29 |
 | KD-015 | **Next.js App Router + shadcn/ui** — compact light theme, TanStack Table | Standardised design system per readme; data-dense tables inspired by Eleken/LCM Hub | MUI, Ant Design, plain Tailwind | 2026-06-29 |
 | KD-016 | **Deploy split:** frontend → Vercel, backend → Railway | Matches readme deployment targets; fits static/SSR frontend + long-running API | Single host; containerise both on Railway | 2026-06-29 |
@@ -597,6 +599,7 @@ Record notable architecture, schema, API, and deployment changes here (newest fi
 
 | Date | Change |
 |------|--------|
+| 2026-07-01 | Fleet selection: unlimited CSV export selection; compare capped at 2–8; select-all-visible bulk deselect fix + tri-state header checkbox (`checkbox.tsx` indeterminate) — KD-029 |
 | 2026-07-01 | **Extract Airline** multi-slug + live progress: comma-separated slug input (`frontend/lib/airline-slugs.ts`), `PipelineProgressPanel`, simplified `PipelineTriggerButton`; `pipeline/run_progress.py` + incremental commits in `execute_hardware_pipeline` / `execute_flight_pipeline`; mid-run poll test (`test_get_pipeline_run_mid_progress`) — KD-028 |
 | 2026-07-01 | Pipeline trigger API (`backend/app/routers/pipeline.py`): `POST /api/v1/pipeline/hardware|flight`, run status endpoints, `pipeline_type` on `pipeline_runs`, `execute_*_pipeline` shared with CLI; **Extract Airline** UI on View 1 (slug input, extract vs update); aircraft compare `table-fixed` column widths; pipeline triggers removed from compare pages — KD-027 |
 | 2026-06-30 | Airline Cabin Comparison polish: dedicated **Airlines** filter card, `table-fixed` wrapping columns (`COMPARE_AIRLINE_COLUMN_CLASS`), left-aligned cells, **Reference URL** row + link rendering, column edit via `PATCH /api/v1/airlines/{slug}/flight-features`, `FlightCompareValueCell`, `shared/flight_fields.py` — KD-025, KD-026 |
