@@ -1,7 +1,7 @@
 {
   "source": "llm",
   "research_model": "gemini-2.5-pro",
-  "researched_at": "2026-06-30T17:20:23.970232+00:00",
+  "researched_at": "2026-07-01T03:17:31.266047+00:00",
   "sources_by_cabin": {
     "first": [
       {
@@ -10,7 +10,7 @@
           "first"
         ],
         "page_type": "cabin_product",
-        "title": "First Class | Cabin Features | The Emirates Experience",
+        "title": "First Class cabin features",
         "source_type": "discovered"
       },
       {
@@ -23,30 +23,30 @@
         "source_type": "discovered"
       },
       {
-        "url": "https://www.emirates.com/uk/english/before-you-fly/baggage/checked-baggage/",
+        "url": "https://www.emirates.com/ae/english/before-you-fly/baggage/checked-baggage/",
         "cabin_keys": [
           "first"
         ],
         "page_type": "baggage",
-        "title": "Checked baggage | Baggage | Before You Fly",
+        "title": "Checked baggage | Baggage | Before you fly",
         "source_type": "discovered"
       },
       {
-        "url": "https://www.going.com/guides/emirates-first-class",
+        "url": "https://www.emirates.com/ae/english/before-you-fly/baggage/cabin-baggage-rules/",
+        "cabin_keys": [
+          "first"
+        ],
+        "page_type": "baggage",
+        "title": "Carry-on baggage rules | Baggage | Before you fly",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://simpleflying.com/emirates-airbus-a380-first-class-amenities-cost-breakdown/",
         "cabin_keys": [
           "first"
         ],
         "page_type": "cabin_product",
-        "title": "Everything to Know About the Emirates First Class Experience",
-        "source_type": "discovered"
-      },
-      {
-        "url": "https://www.emirates.com/english/experience/seasonal-occasions/amenity-kits/",
-        "cabin_keys": [
-          "first"
-        ],
-        "page_type": "cabin_product",
-        "title": "Onboard comfort | Cabin Features | The Emirates Experience",
+        "title": "Here's What Emirates Actually Spends Per Passenger On Its Airbus A380 First Class Amenities",
         "source_type": "discovered"
       }
     ],
@@ -61,30 +61,30 @@
         "source_type": "discovered"
       },
       {
-        "url": "https://www.emirates.com/uk/english/before-you-fly/baggage/checked-baggage/",
+        "url": "https://www.emirates.com/ae/english/before-you-fly/baggage/checked-baggage/",
         "cabin_keys": [
           "business"
         ],
         "page_type": "baggage",
-        "title": "Checked baggage | Baggage | Before You Fly",
+        "title": "Checked baggage | Baggage | Before you fly",
         "source_type": "discovered"
       },
       {
-        "url": "https://www.emirates.com/uk/english/experience/our-lounges/business-class-lounge/",
+        "url": "https://www.emirates.com/ae/english/before-you-fly/baggage/cabin-baggage-rules/",
         "cabin_keys": [
           "business"
         ],
-        "page_type": "lounge",
-        "title": "Business Class lounge | Our lounges | The Emirates Experience",
+        "page_type": "baggage",
+        "title": "Carry-on baggage rules | Baggage | Before you fly",
         "source_type": "discovered"
       },
       {
-        "url": "https://simpleflying.com/emirates-business-class-benefits/",
+        "url": "https://simpleflying.com/what-are-the-benefits-of-flying-emirates-business-class/",
         "cabin_keys": [
           "business"
         ],
         "page_type": "cabin_product",
-        "title": "What Are The Benefits Of Flying In Emirates' Business Class?",
+        "title": "What Are The Benefits Of Flying Emirates Business Class?",
         "source_type": "discovered"
       },
       {
@@ -108,30 +108,30 @@
         "source_type": "discovered"
       },
       {
-        "url": "https://www.emirates.com/uk/english/before-you-fly/baggage/checked-baggage/",
+        "url": "https://www.emirates.com/ae/english/before-you-fly/baggage/checked-baggage/",
         "cabin_keys": [
           "premium_economy"
         ],
         "page_type": "baggage",
-        "title": "Checked baggage | Baggage | Before You Fly",
+        "title": "Checked baggage | Baggage | Before you fly",
         "source_type": "discovered"
       },
       {
-        "url": "https://www.emirates.com/ae/english/experience/seasonal-occasions/amenity-kits/",
+        "url": "https://www.emirates.com/ae/english/before-you-fly/baggage/cabin-baggage-rules/",
+        "cabin_keys": [
+          "premium_economy"
+        ],
+        "page_type": "baggage",
+        "title": "Carry-on baggage rules | Baggage | Before you fly",
+        "source_type": "discovered"
+      },
+      {
+        "url": "https://www.emirates.com/media-centre/emirates-launches-new-amenity-kits-highlighting-endangered-species/",
         "cabin_keys": [
           "premium_economy"
         ],
         "page_type": "cabin_product",
-        "title": "Emirates launches new collection of keepsake amenity kits to highlight endangered species",
-        "source_type": "discovered"
-      },
-      {
-        "url": "https://themidnightblueelephant.com/emirates-premium-economy/",
-        "cabin_keys": [
-          "premium_economy"
-        ],
-        "page_type": "cabin_product",
-        "title": "The Ins & Outs of flying Emirates Premium Economy.",
+        "title": "Emirates launches new amenity kits highlighting endangered species",
         "source_type": "discovered"
       },
       {
@@ -140,7 +140,7 @@
           "premium_economy"
         ],
         "page_type": "cabin_product",
-        "title": "Emirates Premium Economy: What to Expect on Your Flight Now",
+        "title": "Emirates Premium Economy What to Expect on Your Flight Now",
         "source_type": "discovered"
       }
     ],
@@ -155,63 +155,62 @@
         "source_type": "discovered"
       },
       {
-        "url": "https://www.emirates.com/uk/english/before-you-fly/baggage/checked-baggage/",
+        "url": "https://www.emirates.com/ae/english/before-you-fly/baggage/checked-baggage/",
         "cabin_keys": [
           "economy"
         ],
         "page_type": "baggage",
-        "title": "Checked baggage | Baggage | Before You Fly",
+        "title": "Checked baggage | Baggage | Before you fly",
         "source_type": "discovered"
       },
       {
-        "url": "https://www.emirates.com/uk/english/before-you-fly/check-in/",
+        "url": "https://www.emirates.com/ae/english/before-you-fly/baggage/cabin-baggage-rules/",
         "cabin_keys": [
           "economy"
         ],
-        "page_type": "check_in",
-        "title": "How to check in for your Emirates flight to and from Dubai",
+        "page_type": "baggage",
+        "title": "Carry-on baggage rules | Baggage | Before you fly",
         "source_type": "discovered"
       },
       {
-        "url": "https://www.emirates.com/ae/english/experience/seasonal-occasions/amenity-kits/",
+        "url": "https://www.emirates.com/media-centre/emirates-launches-new-amenity-kits-highlighting-endangered-species/",
         "cabin_keys": [
           "economy"
         ],
         "page_type": "cabin_product",
-        "title": "Emirates launches new collection of keepsake amenity kits to highlight endangered species",
+        "title": "Emirates launches new amenity kits highlighting endangered species",
         "source_type": "discovered"
       },
       {
-        "url": "https://upgradedpoints.com/travel/airlines/emirates-boarding-process/",
+        "url": "https://www.emirates.com/uk/english/help/faq/193478/what-is-my-baggage-allowance",
         "cabin_keys": [
           "economy"
         ],
-        "page_type": "general",
-        "title": "Emirates Boarding Process and Groups - Complete Guide",
+        "page_type": "baggage",
+        "title": "What is my baggage allowance?",
         "source_type": "discovered"
       }
     ]
   },
   "grounding_queries": [
+    "Emirates first class benefits",
     "Emirates first class baggage allowance",
-    "Emirates first class check-in priority",
-    "Emirates first class boarding priority",
     "Emirates first class lounge access",
-    "Emirates first class amenity kit brand",
+    "Emirates first class amenity kit",
+    "Emirates check-in policy first class",
+    "Emirates business class benefits",
     "Emirates business class baggage allowance",
-    "Emirates business class check-in priority",
-    "Emirates business class boarding priority",
     "Emirates business class lounge access",
-    "Emirates business class amenity kit brand",
+    "Emirates business class amenity kit",
+    "Emirates boarding process business class",
+    "Emirates premium economy benefits",
     "Emirates premium economy baggage allowance",
-    "Emirates premium economy check-in priority",
-    "Emirates premium economy boarding priority",
     "Emirates premium economy lounge access",
     "Emirates premium economy amenity kit",
+    "Emirates premium economy check-in",
+    "Emirates economy class benefits",
     "Emirates economy class baggage allowance",
-    "Emirates economy class check-in",
-    "Emirates economy class boarding",
-    "Emirates economy class lounge access",
-    "Emirates economy class amenity kit"
+    "Emirates economy class amenity kit",
+    "Emirates economy class check-in and boarding"
   ]
 }

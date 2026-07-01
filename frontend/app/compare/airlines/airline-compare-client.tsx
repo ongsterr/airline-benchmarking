@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink } from "lucide-react";
+import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
 import { Fragment, useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AirlineBadge } from "@/components/airline-badge";
@@ -41,8 +41,8 @@ import {
 import {
   flightValuesEqual,
   formatFlightValue,
-  isDisplayableUrl,
-  serializeFlightFieldInput,
+  normalizeReferenceSources,
+  referenceSourcesDisplayKey,
 } from "@/lib/flight-fields";
 import { cn } from "@/lib/utils";
 import { useEditAuth } from "@/lib/use-edit-auth";
@@ -61,15 +61,17 @@ function parseSlugs(param: string | null): string[] {
   return param?.split(",").filter(Boolean) ?? [];
 }
 
-function isDifferent(values: Record<string, unknown>) {
+function isDifferent(fieldKey: string, values: Record<string, unknown>) {
   const vals = Object.values(values);
-  return new Set(vals.map((v) => formatFlightValue(v))).size > 1;
+  const formatter =
+    fieldKey === "source_url" ? referenceSourcesDisplayKey : formatFlightValue;
+  return new Set(vals.map((v) => formatter(v))).size > 1;
 }
 
 function buildDraftFromRows(rows: CompareRow[], slug: string): DraftValues {
   const draft: DraftValues = {};
   for (const row of rows) {
-    if (row.scope !== "flight") continue;
+    if (row.scope !== "flight" || row.field_key === "source_url") continue;
     draft[row.field_key] = row.values[slug] ?? null;
   }
   return draft;
@@ -79,31 +81,18 @@ function buildAirlineUpdatePayload(
   rows: CompareRow[],
   slug: string,
   draft: DraftValues
-): { fields: Record<string, string | number | string[] | null>; source_url?: string | null } {
+): { fields: Record<string, string | number | string[] | null> } {
   const fields: Record<string, string | number | string[] | null> = {};
-  let source_url: string | null | undefined;
 
   for (const row of rows) {
-    if (row.scope !== "flight") continue;
+    if (row.scope !== "flight" || row.field_key === "source_url") continue;
     const initial = row.values[slug] ?? null;
     const next = draft[row.field_key] ?? null;
     if (!flightValuesEqual(row.field_key, initial, next)) continue;
-
-    if (row.field_key === "source_url") {
-      source_url = next === null || next === "—" ? "" : String(next);
-    } else {
-      fields[row.field_key] = next as string | number | string[] | null;
-    }
+    fields[row.field_key] = next as string | number | string[] | null;
   }
 
-  const payload: {
-    fields: Record<string, string | number | string[] | null>;
-    source_url?: string | null;
-  } = { fields };
-  if (source_url !== undefined) {
-    payload.source_url = source_url;
-  }
-  return payload;
+  return { fields };
 }
 
 function AirlineColumnHeader({
@@ -172,66 +161,67 @@ function AirlineColumnHeader({
   );
 }
 
-function ReferenceUrlCell({
-  value,
-  isEditing,
-  isDirty,
+function ReferenceUrlLink({
+  source,
   diff,
-  canEdit,
-  onStartEdit,
-  onChange,
 }: {
-  value: unknown;
-  isEditing: boolean;
-  isDirty: boolean;
+  source: ReturnType<typeof normalizeReferenceSources>[number];
   diff: boolean;
-  canEdit: boolean;
-  onStartEdit: () => void;
-  onChange: (value: unknown) => void;
 }) {
-  if (isEditing) {
-    return (
-      <div className={cn("relative text-left", isDirty && "rounded-md ring-1 ring-primary/40")}>
-        <Input
-          type="url"
-          value={serializeFlightFieldInput("source_url", value)}
-          onChange={(e) => onChange(e.target.value || null)}
-          className="h-7 w-full text-xs"
-          placeholder="https://..."
-        />
-      </div>
-    );
+  return (
+    <a
+      href={source.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cn(
+        "flex items-start gap-0.5 break-all text-xs",
+        TABLE_LINK_CLASS,
+        diff && "font-medium"
+      )}
+      title={source.url}
+    >
+      <span className="min-w-0 flex-1">{source.title?.trim() || source.url}</span>
+      <ExternalLink className="mt-0.5 size-2.5 shrink-0 opacity-70" aria-hidden />
+    </a>
+  );
+}
+
+function ReferenceUrlCell({ value, diff }: { value: unknown; diff: boolean }) {
+  const sources = normalizeReferenceSources(value);
+  if (sources.length === 0) {
+    return <span className="text-xs text-muted-foreground">—</span>;
   }
 
-  if (isDisplayableUrl(value)) {
-    return (
-      <a
-        href={value}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={cn(
-          "flex items-start gap-0.5 break-all text-xs",
-          TABLE_LINK_CLASS,
-          diff && "font-medium"
-        )}
-      >
-        <span className="min-w-0 flex-1">{value}</span>
-        <ExternalLink className="mt-0.5 size-2.5 shrink-0 opacity-70" aria-hidden />
-      </a>
-    );
+  if (sources.length === 1) {
+    return <ReferenceUrlLink source={sources[0]} diff={diff} />;
   }
+
+  const label = `${sources.length} reference URLs`;
 
   return (
-    <FlightCompareValueCell
-      fieldKey="source_url"
-      value={value}
-      isEditing={false}
-      isDirty={false}
-      diff={diff}
-      canEdit={canEdit}
-      onStartEdit={onStartEdit}
-      onChange={() => {}}
-    />
+    <details className="group">
+      <summary
+        className={cn(
+          "flex cursor-pointer list-none items-center gap-1 text-xs text-muted-foreground hover:text-foreground [&::-webkit-details-marker]:hidden",
+          diff && "font-medium text-foreground"
+        )}
+      >
+        <ChevronRight
+          className="size-3 shrink-0 group-open:hidden"
+          aria-hidden
+        />
+        <ChevronDown
+          className="hidden size-3 shrink-0 group-open:block"
+          aria-hidden
+        />
+        <span>{label}</span>
+      </summary>
+      <div className="mt-1 space-y-1">
+        {sources.map((source) => (
+          <ReferenceUrlLink key={source.url} source={source} diff={diff} />
+        ))}
+      </div>
+    </details>
   );
 }
 
@@ -354,7 +344,7 @@ export default function AirlineComparePageClient() {
   const isDirty = useMemo(() => {
     if (!editingSlug) return false;
     return rows.some((row) => {
-      if (row.scope !== "flight") return false;
+      if (row.scope !== "flight" || row.field_key === "source_url") return false;
       const initial = row.values[editingSlug] ?? null;
       const next = draft[row.field_key] ?? null;
       return !flightValuesEqual(row.field_key, initial, next);
@@ -364,10 +354,7 @@ export default function AirlineComparePageClient() {
   const handleSave = async () => {
     if (!editingSlug || !isDirty) return;
     const payload = buildAirlineUpdatePayload(rows, editingSlug, draft);
-    if (
-      Object.keys(payload.fields).length === 0 &&
-      payload.source_url === undefined
-    ) {
+    if (Object.keys(payload.fields).length === 0) {
       return;
     }
 
@@ -549,7 +536,7 @@ export default function AirlineComparePageClient() {
               rows.map((row) => {
                 const showCategory = row.category !== lastCategory;
                 lastCategory = row.category;
-                const diff = isDifferent(row.values);
+                const diff = isDifferent(row.field_key, row.values);
                 return (
                   <Fragment key={`${row.category}-${row.field_key}`}>
                     {showCategory && (
@@ -597,18 +584,8 @@ export default function AirlineComparePageClient() {
                             <div className="min-w-0 text-left">
                             {row.field_key === "source_url" ? (
                               <ReferenceUrlCell
-                                value={cellValue}
-                                isEditing={isEditing}
-                                isDirty={isCellDirty}
+                                value={row.values[slug] ?? null}
                                 diff={diff}
-                                canEdit={canEdit}
-                                onStartEdit={() => startEditing(slug)}
-                                onChange={(value) =>
-                                  setDraft((prev) => ({
-                                    ...prev,
-                                    [row.field_key]: value,
-                                  }))
-                                }
                               />
                             ) : isEditing ? (
                               <FlightCompareValueCell

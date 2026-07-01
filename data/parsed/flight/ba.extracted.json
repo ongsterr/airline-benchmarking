@@ -17,13 +17,14 @@
         "earplugs",
         "dental kit",
         "pen",
-        "facial wipes",
+        "deodorant",
+        "tissues",
         "moisturiser",
         "lip balm",
-        "deodorant",
-        "tissues"
+        "shaving gel",
+        "facial wipes"
       ],
-      "amenity_kit_brand": "Temperley London / Elemis",
+      "amenity_kit_brand": "Temperley London",
       "extra_features": {}
     },
     "business": {
@@ -45,7 +46,7 @@
         "eyemask",
         "socks"
       ],
-      "amenity_kit_brand": "The White Company / anatom\u0113",
+      "amenity_kit_brand": "anatom\u0113",
       "extra_features": {}
     },
     "premium_economy": {
@@ -60,11 +61,10 @@
       "boarding_priority": "Yes",
       "lounge_access": "No",
       "amenity_kit": [
-        "eyeshade",
+        "eyemask",
         "socks",
         "pen",
-        "toothbrush",
-        "toothpaste",
+        "dental kit",
         "lip balm"
       ],
       "amenity_kit_brand": null,

@@ -31,17 +31,56 @@ export const FLIGHT_FIELD_TYPES: Record<string, FlightFieldType> = {
   source_url: "string",
 };
 
+export type FlightSourceCandidate = {
+  url: string;
+  cabin_keys?: string[];
+  page_type?: string;
+  title?: string | null;
+  source_type?: string;
+};
+
+export function isReferenceSource(value: unknown): value is FlightSourceCandidate {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "url" in value &&
+    typeof (value as FlightSourceCandidate).url === "string"
+  );
+}
+
+export function normalizeReferenceSources(value: unknown): FlightSourceCandidate[] {
+  if (Array.isArray(value)) {
+    return value.filter(isReferenceSource);
+  }
+  if (typeof value === "string" && isDisplayableUrl(value)) {
+    return [{ url: value }];
+  }
+  return [];
+}
+
+export function referenceSourcesDisplayKey(value: unknown): string {
+  const sources = normalizeReferenceSources(value);
+  if (sources.length === 0) return "—";
+  return sources
+    .map((source) => source.url)
+    .sort()
+    .join("|");
+}
+
 export function formatFlightValue(value: unknown): string {
   if (value === null || value === undefined || value === "—") return "—";
   if (Array.isArray(value)) {
     if (value.length === 0) return "—";
+    if (value.every(isReferenceSource)) {
+      return referenceSourcesDisplayKey(value);
+    }
     return value.map(String).join(", ");
   }
   return String(value);
 }
 
 export function flightFieldLabel(fieldKey: string): string {
-  if (fieldKey === "source_url") return "Reference URL";
+  if (fieldKey === "source_url") return "Reference URLs";
   return fieldKey.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 

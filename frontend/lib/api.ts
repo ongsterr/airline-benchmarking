@@ -62,12 +62,20 @@ export type AircraftListItem = {
   last_updated: string | null;
 };
 
+export type FlightSourceCandidate = {
+  url: string;
+  cabin_keys?: string[];
+  page_type?: string;
+  title?: string | null;
+  source_type?: string;
+};
+
 export type CompareRow = {
   feature: string;
   field_key: string;
   scope: "aircraft" | "cabin" | "flight";
   category: string;
-  values: Record<string, string | number | boolean | null>;
+  values: Record<string, string | number | boolean | FlightSourceCandidate[] | null>;
 };
 
 export type CompareConfigColumn = {

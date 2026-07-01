@@ -4,27 +4,27 @@
     "sources": [
       {
         "url": "https://www.britishairways.com/en-us/information/travel-classes/first/first",
-        "title": "First | Travel classes - British Airways",
-        "publisher": "britishairways.com"
+        "title": "First | Travel classes",
+        "publisher": "British Airways"
       },
       {
         "url": "https://www.britishairways.com/en-us/information/baggage-essentials",
-        "title": "Baggage essentials | Information - British Airways",
-        "publisher": "britishairways.com"
+        "title": "Baggage essentials | Information",
+        "publisher": "British Airways"
+      },
+      {
+        "url": "https://www.britishairways.com/en-us/information/lounges/first-lounges",
+        "title": "First lounges | Information",
+        "publisher": "British Airways"
       },
       {
         "url": "https://www.going.com/guides/british-airways-first-class",
         "title": "The Complete Guide to British Airways First Class",
-        "publisher": "Going.com"
+        "publisher": "Going"
       },
       {
-        "url": "https://princeoftravel.com/guides/british-airways-first-class/",
-        "title": "The Complete Guide to British Airways First Class | Prince of Travel",
-        "publisher": "Prince of Travel"
-      },
-      {
-        "url": "https://www.businessclass.com/airlines/british-airways/first-class",
-        "title": "Review of British Airways First Class",
+        "url": "https://www.businessclass.com/airlines/british-airways/first-class-amenity-kit",
+        "title": "10 Best Amenity Kits in First Class",
         "publisher": "Businessclass.com"
       }
     ],
@@ -44,42 +44,43 @@
         "earplugs",
         "dental kit",
         "pen",
-        "facial wipes",
+        "deodorant",
+        "tissues",
         "moisturiser",
         "lip balm",
-        "deodorant",
-        "tissues"
+        "shaving gel",
+        "facial wipes"
       ],
-      "amenity_kit_brand": "Temperley London / Elemis"
+      "amenity_kit_brand": "Temperley London"
     }
   },
   "business": {
     "cabin_class": "Business",
     "sources": [
       {
-        "url": "https://www.britishairways.com/en-gb/information/travel-classes/business/club-world",
-        "title": "Club World | Business class flights - British Airways",
-        "publisher": "britishairways.com"
+        "url": "https://www.britishairways.com/en-us/information/travel-classes/business/club-world",
+        "title": "Club World | Business class",
+        "publisher": "British Airways"
       },
       {
-        "url": "https://www.britishairways.com/en-us/information/baggage-essentials/checked-baggage-allowances",
-        "title": "Checked baggage allowances | Information - British Airways",
-        "publisher": "britishairways.com"
+        "url": "https://www.britishairways.com/en-us/information/baggage-essentials",
+        "title": "Baggage essentials | Information",
+        "publisher": "British Airways"
       },
       {
-        "url": "https://www.britishairways.com/en-gb/information/lounges",
-        "title": "Lounges | Information - British Airways",
-        "publisher": "britishairways.com"
+        "url": "https://www.britishairways.com/en-us/information/lounges/business-lounges",
+        "title": "Business lounges | Information",
+        "publisher": "British Airways"
       },
       {
-        "url": "https://mediacentre.britishairways.com/pressrelease/details/86/2025-259/14139",
+        "url": "https://www.britishairways.com/en-gb/information/boarding",
+        "title": "Boarding | Information",
+        "publisher": "British Airways"
+      },
+      {
+        "url": "https://mediacentre.britishairways.com/pressrelease/details/86/2023-319/13792",
         "title": "BRITISH AIRWAYS LAUNCHES NEW COLLECTABLE RANGE OF BUSINESS CLASS AMENITY KITS",
-        "publisher": "British Airways Media Centre"
-      },
-      {
-        "url": "https://www.vagari-bags.com/blogs/reviews/british-airways-baggage-allowance",
-        "title": "British Airways Baggage Guide 2026 - What You Should Know",
-        "publisher": "Vagari Bags"
+        "publisher": "British Airways"
       }
     ],
     "features": {
@@ -100,26 +101,26 @@
         "eyemask",
         "socks"
       ],
-      "amenity_kit_brand": "The White Company / anatom\u0113"
+      "amenity_kit_brand": "anatom\u0113"
     }
   },
   "premium_economy": {
     "cabin_class": "Premium Economy",
     "sources": [
       {
-        "url": "https://www.britishairways.com/en-gb/information/travel-classes/premium-economy/world-traveller-plus",
+        "url": "https://www.britishairways.com/en-us/information/travel-classes/premium-economy/world-traveller-plus",
         "title": "World Traveller Plus | British Airways premium economy",
-        "publisher": "britishairways.com"
+        "publisher": "British Airways"
       },
       {
-        "url": "https://www.britishairways.com/en-us/information/baggage-essentials/checked-baggage-allowances",
-        "title": "Checked baggage allowances | Information - British Airways",
-        "publisher": "britishairways.com"
+        "url": "https://www.britishairways.com/en-us/information/baggage-essentials",
+        "title": "Baggage essentials | Information",
+        "publisher": "British Airways"
       },
       {
-        "url": "https://www.britishairways.com/high-life/article/eight-reasons-to-upgrade-to-world-traveller-plus",
-        "title": "Eight reasons to upgrade to World Traveller Plus | High Life Magazine",
-        "publisher": "British Airways High Life Magazine"
+        "url": "https://www.going.com/guides/british-airways-premium-economy-review",
+        "title": "British Airways Premium Economy: Honest Traveler Review",
+        "publisher": "Going"
       },
       {
         "url": "https://thepointsguy.com/news/british-airways-new-premium-economy-amenity-kits/",
@@ -127,9 +128,9 @@
         "publisher": "The Points Guy"
       },
       {
-        "url": "https://simpleflying.com/british-airways-world-traveller-plus-benefits-guide/",
-        "title": "What Are The Benefits Of Flying In British Airways' World Traveller Plus?",
-        "publisher": "Simple Flying"
+        "url": "https://travelcodex.com/british-airways-premium-economy-review/",
+        "title": "British Airways Premium Economy Review: Is It Worth It?",
+        "publisher": "Travel Codex"
       }
     ],
     "features": {
@@ -143,11 +144,10 @@
       "boarding_priority": "Yes",
       "lounge_access": "No",
       "amenity_kit": [
-        "eyeshade",
+        "eyemask",
         "socks",
         "pen",
-        "toothbrush",
-        "toothpaste",
+        "dental kit",
         "lip balm"
       ],
       "amenity_kit_brand": null
@@ -157,29 +157,29 @@
     "cabin_class": "Economy",
     "sources": [
       {
-        "url": "https://www.britishairways.com/en-gb/information/travel-classes/economy/world-traveller",
-        "title": "World Traveller | British Airways economy class",
-        "publisher": "britishairways.com"
+        "url": "https://www.britishairways.com/en-us/information/travel-classes/economy/world-traveller",
+        "title": "World Traveller - British Airways economy class",
+        "publisher": "British Airways"
       },
       {
         "url": "https://www.britishairways.com/en-us/information/baggage-essentials/checked-baggage-allowances",
-        "title": "Checked baggage allowances | Information - British Airways",
-        "publisher": "britishairways.com"
+        "title": "Checked baggage allowances",
+        "publisher": "British Airways"
+      },
+      {
+        "url": "https://www.britishairways.com/en-gb/information/checking-in-and-boarding",
+        "title": "Checking in and boarding",
+        "publisher": "British Airways"
+      },
+      {
+        "url": "https://www.upgradedpoints.com/travel/airlines/british-airways-boarding-process/",
+        "title": "British Airways Boarding Groups & Process [Complete Guide]",
+        "publisher": "Upgraded Points"
       },
       {
         "url": "https://www.britishairways.com/en-us/information/baggage-essentials/hand-baggage-allowances",
-        "title": "Hand baggage allowances | Information - British Airways",
-        "publisher": "britishairways.com"
-      },
-      {
-        "url": "https://www.mybaggage.com/shipping/airlines/british-airways-baggage-allowance/",
-        "title": "British Airways 2026 Baggage Allowance",
-        "publisher": "My Baggage"
-      },
-      {
-        "url": "https://www.baggage-allowance.com/british-airways-baggage-allowance/",
-        "title": "British Airways Baggage Allowance 2024",
-        "publisher": "baggage-allowance.com"
+        "title": "Hand baggage allowances",
+        "publisher": "British Airways"
       }
     ],
     "features": {

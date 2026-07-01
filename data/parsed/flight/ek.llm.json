@@ -4,50 +4,47 @@
     "sources": [
       {
         "url": "https://www.emirates.com/uk/english/experience/cabin-features/first-class/",
-        "title": "First Class | Cabin Features | The Emirates Experience",
-        "publisher": "Emirates"
+        "title": "First Class cabin features",
+        "publisher": "emirates.com"
       },
       {
         "url": "https://www.emirates.com/uk/english/experience/our-lounges/first-class-lounge/",
         "title": "First Class lounge | Our lounges | The Emirates Experience",
-        "publisher": "Emirates"
+        "publisher": "emirates.com"
       },
       {
-        "url": "https://www.emirates.com/uk/english/before-you-fly/baggage/checked-baggage/",
-        "title": "Checked baggage | Baggage | Before You Fly",
-        "publisher": "Emirates"
+        "url": "https://www.emirates.com/ae/english/before-you-fly/baggage/checked-baggage/",
+        "title": "Checked baggage | Baggage | Before you fly",
+        "publisher": "emirates.com"
       },
       {
-        "url": "https://www.going.com/guides/emirates-first-class",
-        "title": "Everything to Know About the Emirates First Class Experience",
-        "publisher": "Going"
+        "url": "https://www.emirates.com/ae/english/before-you-fly/baggage/cabin-baggage-rules/",
+        "title": "Carry-on baggage rules | Baggage | Before you fly",
+        "publisher": "emirates.com"
       },
       {
-        "url": "https://www.emirates.com/english/experience/seasonal-occasions/amenity-kits/",
-        "title": "Onboard comfort | Cabin Features | The Emirates Experience",
-        "publisher": "Emirates"
+        "url": "https://simpleflying.com/emirates-airbus-a380-first-class-amenities-cost-breakdown/",
+        "title": "Here's What Emirates Actually Spends Per Passenger On Its Airbus A380 First Class Amenities",
+        "publisher": "Simple Flying"
       }
     ],
     "features": {
       "check-in_priority": "Yes",
       "cabin_bag_pieces": 2,
       "cabin_bag_kg_per_piece": 7,
-      "cabin_bag_kg_total": null,
+      "cabin_bag_kg_total": 14,
       "checked_bag_pieces": 2,
       "checked_bag_kg_per_piece": 32,
       "checked_bag_kg_total": null,
       "boarding_priority": "Yes",
       "lounge_access": "Yes",
       "amenity_kit": [
+        "skincare products",
         "fragrance",
-        "aftershave balm",
-        "body lotion",
-        "lip balm",
-        "dental kit",
-        "deodorant",
-        "earplugs",
-        "foldaway hairbrush",
-        "compact mirror"
+        "pajamas",
+        "slippers",
+        "notebook",
+        "pen"
       ],
       "amenity_kit_brand": "Bulgari"
     }
@@ -58,21 +55,21 @@
       {
         "url": "https://www.emirates.com/uk/english/experience/cabin-features/business-class/",
         "title": "Business Class | Cabin Features | The Emirates Experience",
-        "publisher": "Emirates"
+        "publisher": "emirates.com"
       },
       {
-        "url": "https://www.emirates.com/uk/english/before-you-fly/baggage/checked-baggage/",
-        "title": "Checked baggage | Baggage | Before You Fly",
-        "publisher": "Emirates"
+        "url": "https://www.emirates.com/ae/english/before-you-fly/baggage/checked-baggage/",
+        "title": "Checked baggage | Baggage | Before you fly",
+        "publisher": "emirates.com"
       },
       {
-        "url": "https://www.emirates.com/uk/english/experience/our-lounges/business-class-lounge/",
-        "title": "Business Class lounge | Our lounges | The Emirates Experience",
-        "publisher": "Emirates"
+        "url": "https://www.emirates.com/ae/english/before-you-fly/baggage/cabin-baggage-rules/",
+        "title": "Carry-on baggage rules | Baggage | Before you fly",
+        "publisher": "emirates.com"
       },
       {
-        "url": "https://simpleflying.com/emirates-business-class-benefits/",
-        "title": "What Are The Benefits Of Flying In Emirates' Business Class?",
+        "url": "https://simpleflying.com/what-are-the-benefits-of-flying-emirates-business-class/",
+        "title": "What Are The Benefits Of Flying Emirates Business Class?",
         "publisher": "Simple Flying"
       },
       {
@@ -85,21 +82,22 @@
       "check-in_priority": "Yes",
       "cabin_bag_pieces": 2,
       "cabin_bag_kg_per_piece": 7,
-      "cabin_bag_kg_total": null,
+      "cabin_bag_kg_total": 14,
       "checked_bag_pieces": 2,
       "checked_bag_kg_per_piece": 32,
       "checked_bag_kg_total": null,
       "boarding_priority": "Yes",
       "lounge_access": "Yes",
       "amenity_kit": [
+        "skincare products",
         "fragrance",
-        "shaving balm",
-        "body lotion",
         "lip balm",
         "dental kit",
-        "deodorant",
         "earplugs",
-        "foldaway hairbrush"
+        "hairbrush",
+        "pajamas",
+        "slippers",
+        "eyemask"
       ],
       "amenity_kit_brand": "Bulgari"
     }
@@ -110,26 +108,26 @@
       {
         "url": "https://www.emirates.com/uk/english/experience/cabin-features/premium-economy-class/",
         "title": "Premium Economy | Cabin Features | The Emirates Experience",
-        "publisher": "Emirates"
+        "publisher": "emirates.com"
       },
       {
-        "url": "https://www.emirates.com/uk/english/before-you-fly/baggage/checked-baggage/",
-        "title": "Checked baggage | Baggage | Before You Fly",
-        "publisher": "Emirates"
+        "url": "https://www.emirates.com/ae/english/before-you-fly/baggage/checked-baggage/",
+        "title": "Checked baggage | Baggage | Before you fly",
+        "publisher": "emirates.com"
       },
       {
-        "url": "https://www.emirates.com/ae/english/experience/seasonal-occasions/amenity-kits/",
-        "title": "Emirates launches new collection of keepsake amenity kits to highlight endangered species",
-        "publisher": "Emirates"
+        "url": "https://www.emirates.com/ae/english/before-you-fly/baggage/cabin-baggage-rules/",
+        "title": "Carry-on baggage rules | Baggage | Before you fly",
+        "publisher": "emirates.com"
       },
       {
-        "url": "https://themidnightblueelephant.com/emirates-premium-economy/",
-        "title": "The Ins & Outs of flying Emirates Premium Economy.",
-        "publisher": "The Midnight Blue Elephant"
+        "url": "https://www.emirates.com/media-centre/emirates-launches-new-amenity-kits-highlighting-endangered-species/",
+        "title": "Emirates launches new amenity kits highlighting endangered species",
+        "publisher": "emirates.com"
       },
       {
         "url": "https://www.going.com/guides/emirates-premium-economy",
-        "title": "Emirates Premium Economy: What to Expect on Your Flight Now",
+        "title": "Emirates Premium Economy What to Expect on Your Flight Now",
         "publisher": "Going"
       }
     ],
@@ -144,13 +142,13 @@
       "boarding_priority": "Yes",
       "lounge_access": "No",
       "amenity_kit": [
-        "soft socks",
+        "socks",
         "eyeshades",
         "earplugs",
         "dental kit",
         "lip balm",
-        "hand relief moisturising cream",
-        "hydrating face lotion"
+        "hand cream",
+        "face lotion"
       ],
       "amenity_kit_brand": "Aveda"
     }
@@ -161,27 +159,27 @@
       {
         "url": "https://www.emirates.com/uk/english/experience/cabin-features/economy-class/",
         "title": "Economy Class | Cabin Features | The Emirates Experience",
-        "publisher": "Emirates"
+        "publisher": "emirates.com"
       },
       {
-        "url": "https://www.emirates.com/uk/english/before-you-fly/baggage/checked-baggage/",
-        "title": "Checked baggage | Baggage | Before You Fly",
-        "publisher": "Emirates"
+        "url": "https://www.emirates.com/ae/english/before-you-fly/baggage/checked-baggage/",
+        "title": "Checked baggage | Baggage | Before you fly",
+        "publisher": "emirates.com"
       },
       {
-        "url": "https://www.emirates.com/uk/english/before-you-fly/check-in/",
-        "title": "How to check in for your Emirates flight to and from Dubai",
-        "publisher": "Emirates"
+        "url": "https://www.emirates.com/ae/english/before-you-fly/baggage/cabin-baggage-rules/",
+        "title": "Carry-on baggage rules | Baggage | Before you fly",
+        "publisher": "emirates.com"
       },
       {
-        "url": "https://www.emirates.com/ae/english/experience/seasonal-occasions/amenity-kits/",
-        "title": "Emirates launches new collection of keepsake amenity kits to highlight endangered species",
-        "publisher": "Emirates"
+        "url": "https://www.emirates.com/media-centre/emirates-launches-new-amenity-kits-highlighting-endangered-species/",
+        "title": "Emirates launches new amenity kits highlighting endangered species",
+        "publisher": "emirates.com"
       },
       {
-        "url": "https://upgradedpoints.com/travel/airlines/emirates-boarding-process/",
-        "title": "Emirates Boarding Process and Groups - Complete Guide",
-        "publisher": "Upgraded Points"
+        "url": "https://www.emirates.com/uk/english/help/faq/193478/what-is-my-baggage-allowance",
+        "title": "What is my baggage allowance?",
+        "publisher": "emirates.com"
       }
     ],
     "features": {
@@ -195,7 +193,7 @@
       "boarding_priority": "No",
       "lounge_access": "No",
       "amenity_kit": [
-        "soft socks",
+        "socks",
         "eyeshades",
         "earplugs",
         "dental kit"

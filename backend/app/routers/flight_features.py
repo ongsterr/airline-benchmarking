@@ -7,7 +7,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from backend.app.models.entities import Airline, AirlineCabinFlightFeature
+from backend.app.models.entities import Airline, AirlineCabinFlightFeature, FlightFeatureSource
 from shared.flight_fields import (
     FLIGHT_FIELDS,
     coerce_flight_field_value,
@@ -21,7 +21,16 @@ from shared.schemas import (
     CompareAirlineColumn,
     CompareAirlineResponse,
     CompareRow,
+    FlightSourceCandidate,
 )
+
+_PAGE_TYPE_ORDER = {
+    "cabin_product": 0,
+    "baggage": 1,
+    "lounge": 2,
+    "check_in": 3,
+    "general": 4,
+}
 
 
 def _entity_to_cabin(entity: AirlineCabinFlightFeature) -> CabinFlightFeatures:
@@ -68,6 +77,64 @@ def _cabin_entities_for_slugs(
         if slug:
             by_slug[slug] = row
     return by_slug
+
+
+def _source_matches_cabin(cabin_keys: list | None, cabin_key: str) -> bool:
+    if not cabin_keys:
+        return True
+    return cabin_key in cabin_keys
+
+
+def _flight_sources_for_slugs(
+    db: Session,
+    slugs: list[str],
+    cabin_key: str,
+) -> dict[str, list[FlightSourceCandidate]]:
+    if not slugs:
+        return {}
+    airlines = db.query(Airline).filter(Airline.slug.in_(slugs)).all()
+    slug_by_id = {airline.id: airline.slug for airline in airlines}
+    if not slug_by_id:
+        return {slug: [] for slug in slugs}
+
+    rows = (
+        db.query(FlightFeatureSource)
+        .filter(FlightFeatureSource.airline_id.in_(slug_by_id.keys()))
+        .all()
+    )
+    by_slug: dict[str, list[FlightSourceCandidate]] = {slug: [] for slug in slugs}
+    for row in rows:
+        slug = slug_by_id.get(row.airline_id)
+        if not slug or not _source_matches_cabin(row.cabin_keys, cabin_key):
+            continue
+        by_slug[slug].append(
+            FlightSourceCandidate(
+                url=row.url,
+                cabin_keys=row.cabin_keys or [],
+                page_type=row.page_type or "general",
+                title=row.title,
+                source_type=row.source_type,
+            )
+        )
+
+    for slug in by_slug:
+        by_slug[slug].sort(
+            key=lambda source: (_PAGE_TYPE_ORDER.get(source.page_type, 99), source.url)
+        )
+    return by_slug
+
+
+def _reference_sources_for_slug(
+    flight_sources_by_slug: dict[str, list[FlightSourceCandidate]],
+    cabin_entities: dict[str, AirlineCabinFlightFeature | None],
+    slug: str,
+) -> list[dict[str, Any]]:
+    sources = flight_sources_by_slug.get(slug) or []
+    if not sources:
+        entity = cabin_entities.get(slug)
+        if entity and entity.source_url:
+            sources = [FlightSourceCandidate(url=entity.source_url)]
+    return [source.model_dump() for source in sources]
 
 
 def get_flight_features_for_slug(db: Session, slug: str) -> AirlineFlightFeatures | None:
@@ -159,6 +226,7 @@ def compare_airlines(
     airline_by_slug = {a.slug: a for a in airlines}
     flight_by_slug = get_flight_features_by_slugs(db, slugs)
     cabin_entities = _cabin_entities_for_slugs(db, slugs, cabin_key)
+    flight_sources_by_slug = _flight_sources_for_slugs(db, slugs, cabin_key)
 
     columns = [
         CompareAirlineColumn(
@@ -189,14 +257,12 @@ def compare_airlines(
 
     rows.append(
         CompareRow(
-            feature="Reference URL",
+            feature="Reference URLs",
             field_key="source_url",
             scope="flight",
             category=category,
             values={
-                slug: format_flight_value(
-                    cabin_entities[slug].source_url if cabin_entities.get(slug) else None
-                )
+                slug: _reference_sources_for_slug(flight_sources_by_slug, cabin_entities, slug)
                 for slug in slugs
             },
         )

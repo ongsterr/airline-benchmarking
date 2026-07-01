@@ -1,0 +1,203 @@
+{
+  "first": {
+    "cabin_class": "First",
+    "sources": [
+      {
+        "url": "https://www.jal.co.jp/jp/en/international/service/first/",
+        "title": "JAL international First Class Airport and lounge services",
+        "publisher": "jal.co.jp"
+      },
+      {
+        "url": "https://www.jal.co.jp/jp/en/international/service/first/amenity/",
+        "title": "JAL international First Class Amenities and other services",
+        "publisher": "jal.co.jp"
+      },
+      {
+        "url": "https://www.jal.co.jp/inter/en/service/baggage/checked/",
+        "title": "International Flights Checked baggage - JAL",
+        "publisher": "jal.co.jp"
+      },
+      {
+        "url": "https://www.jal.co.jp/jp/en/inter/boarding_procedures/boarding_sequence.html",
+        "title": "Boarding Sequence (Boarding procedures) - JAL International Flights",
+        "publisher": "jal.co.jp"
+      },
+      {
+        "url": "https://www.executivetraveller.com/japan-airlines-first-class-amenity-kit-zero-halliburton",
+        "title": "Japan Airlines' new Zero Halliburton first class amenity kits",
+        "publisher": "Executive Traveller"
+      }
+    ],
+    "features": {
+      "check-in_priority": "Yes",
+      "cabin_bag_pieces": 1,
+      "cabin_bag_kg_per_piece": null,
+      "cabin_bag_kg_total": 10,
+      "checked_bag_pieces": 3,
+      "checked_bag_kg_per_piece": 32,
+      "checked_bag_kg_total": null,
+      "boarding_priority": "Yes",
+      "lounge_access": "Yes",
+      "amenity_kit": [
+        "toothbrush",
+        "toothpaste",
+        "mouthwash",
+        "earplugs",
+        "eyemask",
+        "hand and body cream",
+        "facial mist",
+        "lip balm",
+        "brush",
+        "moisture mask",
+        "pocket tissue"
+      ],
+      "amenity_kit_brand": "HERALBONY"
+    }
+  },
+  "business": {
+    "cabin_class": "Business",
+    "sources": [
+      {
+        "url": "https://www.jal.co.jp/jp/en/international/service/business/",
+        "title": "JAL international Business Class Airport and lounge services",
+        "publisher": "jal.co.jp"
+      },
+      {
+        "url": "https://www.jal.co.jp/jp/en/international/service/business/amenity/",
+        "title": "JAL international Business Class Amenities and other services",
+        "publisher": "jal.co.jp"
+      },
+      {
+        "url": "https://www.jal.co.jp/inter/en/service/baggage/checked/",
+        "title": "International Flights Checked baggage - JAL",
+        "publisher": "jal.co.jp"
+      },
+      {
+        "url": "https://www.jal.co.jp/jp/en/inter/boarding_procedures/boarding_sequence.html",
+        "title": "Boarding Sequence (Boarding procedures) - JAL International Flights",
+        "publisher": "jal.co.jp"
+      },
+      {
+        "url": "https://www.going.com/guides/japan-airlines-business-class",
+        "title": "Everything to Know About Flying Japan Airlines Business Class",
+        "publisher": "Going"
+      }
+    ],
+    "features": {
+      "check-in_priority": "Yes",
+      "cabin_bag_pieces": 1,
+      "cabin_bag_kg_per_piece": null,
+      "cabin_bag_kg_total": 10,
+      "checked_bag_pieces": 3,
+      "checked_bag_kg_per_piece": 32,
+      "checked_bag_kg_total": null,
+      "boarding_priority": "Yes",
+      "lounge_access": "Yes",
+      "amenity_kit": [
+        "toothbrush",
+        "toothpaste",
+        "earplugs",
+        "eyemask",
+        "pocket tissues",
+        "mobile phone stand",
+        "USB charging cable"
+      ],
+      "amenity_kit_brand": "HERALBONY"
+    }
+  },
+  "premium_economy": {
+    "cabin_class": "Premium Economy",
+    "sources": [
+      {
+        "url": "https://www.jal.co.jp/jp/en/international/service/premium/",
+        "title": "JAL international Premium Economy Class Airport and lounge services",
+        "publisher": "jal.co.jp"
+      },
+      {
+        "url": "https://www.jal.co.jp/jp/en/international/service/premium/amenity/",
+        "title": "JAL international Premium Economy Class Amenities and other services",
+        "publisher": "jal.co.jp"
+      },
+      {
+        "url": "https://www.jal.co.jp/inter/en/service/baggage/checked/",
+        "title": "International Flights Checked baggage - JAL",
+        "publisher": "jal.co.jp"
+      },
+      {
+        "url": "https://www.jal.co.jp/jp/en/inter/boarding_procedures/boarding_sequence.html",
+        "title": "Boarding Sequence (Boarding procedures) - JAL International Flights",
+        "publisher": "jal.co.jp"
+      },
+      {
+        "url": "https://thepointsguy.com/reviews/japan-airlines-a350-1000-premium-economy/",
+        "title": "New Japan Airlines premium economy review",
+        "publisher": "The Points Guy"
+      }
+    ],
+    "features": {
+      "check-in_priority": "Yes",
+      "cabin_bag_pieces": 1,
+      "cabin_bag_kg_per_piece": null,
+      "cabin_bag_kg_total": 10,
+      "checked_bag_pieces": 2,
+      "checked_bag_kg_per_piece": 23,
+      "checked_bag_kg_total": null,
+      "boarding_priority": "Yes",
+      "lounge_access": "Yes",
+      "amenity_kit": [
+        "eyemask",
+        "earplugs",
+        "toothbrush",
+        "toothpaste",
+        "moisturising mask"
+      ],
+      "amenity_kit_brand": null
+    }
+  },
+  "economy": {
+    "cabin_class": "Economy",
+    "sources": [
+      {
+        "url": "https://www.jal.co.jp/inter/en/service/baggage/checked/",
+        "title": "International Flights Checked baggage - JAL",
+        "publisher": "jal.co.jp"
+      },
+      {
+        "url": "https://www.jal.co.jp/jp/en/international/service/economy/amenity/",
+        "title": "JAL international Economy Class Amenities and other services",
+        "publisher": "jal.co.jp"
+      },
+      {
+        "url": "https://www.jal.co.jp/inter/en/service/baggage/carry-on/",
+        "title": "Carry-on baggage - JAL",
+        "publisher": "jal.co.jp"
+      },
+      {
+        "url": "https://www.jal.co.jp/jp/en/inter/boarding_procedures/boarding_sequence.html",
+        "title": "Boarding Sequence (Boarding procedures) - JAL International Flights",
+        "publisher": "jal.co.jp"
+      },
+      {
+        "url": "https://www.cabinzero.com/blogs/news/japan-airlines-baggage-allowance",
+        "title": "Japan Airlines Baggage Allowance Guide For Smoother Boarding",
+        "publisher": "Cabin Zero"
+      }
+    ],
+    "features": {
+      "check-in_priority": "No",
+      "cabin_bag_pieces": 1,
+      "cabin_bag_kg_per_piece": null,
+      "cabin_bag_kg_total": 10,
+      "checked_bag_pieces": 2,
+      "checked_bag_kg_per_piece": 23,
+      "checked_bag_kg_total": null,
+      "boarding_priority": "No",
+      "lounge_access": "No",
+      "amenity_kit": [
+        "earplugs",
+        "eyemask"
+      ],
+      "amenity_kit_brand": null
+    }
+  }
+}
