@@ -98,11 +98,13 @@ function ColumnHeader({
 	onCancel: () => void
 }) {
 	return (
-		<div className="space-y-1.5">
+		<div className="min-w-0 space-y-1.5 break-words [overflow-wrap:anywhere]">
 			<AirlineBadge slug={column.airline_slug} name={column.airline_name} />
-			<div className="text-xs font-medium leading-tight">{column.aircraft_type_displayed || column.svg_id}</div>
+			<div className="text-xs font-medium leading-snug whitespace-normal">
+				{column.aircraft_type_displayed || column.svg_id}
+			</div>
 			{(column.aircraft_code_displayed || column.configuration) && (
-				<div className="font-mono text-[10px] text-muted-foreground">
+				<div className="font-mono text-[10px] text-muted-foreground whitespace-normal">
 					{column.aircraft_code_displayed}
 					{column.aircraft_code_displayed && column.configuration ? ' · ' : ''}
 					{column.configuration}

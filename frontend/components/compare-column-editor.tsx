@@ -1,6 +1,6 @@
 'use client'
 
-import { Badge } from '@/components/ui/badge'
+import type { ReactNode } from 'react'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatCompareValue, getFieldType, parseFieldInput, serializeFieldInput } from '@/lib/compare-fields'
@@ -46,6 +46,21 @@ export function CompareFieldInput({ fieldKey, value, onChange, className }: Comp
 	)
 }
 
+function DiffHighlight({
+	display,
+	diff,
+}: {
+	display: ReactNode
+	diff: boolean
+}) {
+	if (!diff) return <>{display}</>
+	return (
+		<span className="inline-block w-full rounded-md border border-border px-2 py-0.5 text-left font-medium whitespace-normal break-words [overflow-wrap:anywhere]">
+			{display}
+		</span>
+	)
+}
+
 type CompareValueCellProps = {
 	fieldKey: string
 	value: unknown
@@ -69,7 +84,7 @@ export function CompareValueCell({
 }: CompareValueCellProps) {
 	if (isEditing) {
 		return (
-			<div className={cn('relative', isDirty && 'ring-1 ring-primary/40 rounded-md')}>
+			<div className={cn('relative text-left', isDirty && 'rounded-md ring-1 ring-primary/40')}>
 				<CompareFieldInput fieldKey={fieldKey} value={value} onChange={onChange} />
 			</div>
 		)
@@ -79,14 +94,8 @@ export function CompareValueCell({
 
 	if (!canEdit) {
 		return (
-			<span className={cn('block px-1 py-0.5 tabular-nums', diff && 'font-medium')}>
-				{diff ? (
-					<Badge variant="outline" className="font-normal">
-						{display}
-					</Badge>
-				) : (
-					display
-				)}
+			<span className="block px-1 py-0.5 text-left tabular-nums whitespace-normal break-words [overflow-wrap:anywhere]">
+				<DiffHighlight display={display} diff={diff} />
 			</span>
 		)
 	}
@@ -96,19 +105,12 @@ export function CompareValueCell({
 			type="button"
 			onClick={onStartEdit}
 			className={cn(
-				'w-full rounded px-1 py-0.5 text-left transition-colors',
-				'hover:bg-muted/80 hover:ring-1 hover:ring-border',
-				diff && 'font-medium'
+				'w-full rounded px-1 py-0.5 text-left whitespace-normal break-words transition-colors [overflow-wrap:anywhere]',
+				'hover:bg-muted/80 hover:ring-1 hover:ring-border'
 			)}
 			title="Click to edit this configuration"
 		>
-			{diff ? (
-				<Badge variant="outline" className="font-normal">
-					{display}
-				</Badge>
-			) : (
-				display
-			)}
+			<DiffHighlight display={display} diff={diff} />
 		</button>
 	)
 }
