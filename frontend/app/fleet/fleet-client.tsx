@@ -295,7 +295,6 @@ export default function FleetPageClient() {
       });
       updateSelection(next);
     } else {
-      if (selected.size >= MAX_COMPARE_CONFIGS) return;
       const next = new Set(selected);
       next.add(svgId);
       setSelectedMeta((prev) => new Map(prev).set(svgId, item));
@@ -325,7 +324,6 @@ export default function FleetPageClient() {
     const next = new Set(selected);
     if (checked) {
       for (const item of items) {
-        if (next.size >= MAX_COMPARE_CONFIGS) break;
         next.add(item.svg_id);
       }
       setSelectedMeta((prev) => {
@@ -344,6 +342,11 @@ export default function FleetPageClient() {
       });
     }
     updateSelection(next);
+  };
+
+  const handleSelectAllVisible = () => {
+    const shouldSelect = !allVisibleSelected && !someVisibleSelected;
+    toggleSelectAllVisible(shouldSelect);
   };
 
   const handleDownloadCsv = async () => {
@@ -407,7 +410,7 @@ export default function FleetPageClient() {
       <PageHeader
         eyebrow="Fleet explorer"
         title="Fleet configurations"
-        description="Browse aircraft configurations, export selected rows, and compare up to eight at once."
+        description="Browse aircraft configurations, export any number of selected rows as CSV, and compare up to eight at once."
         actions={filters}
       />
 
@@ -502,7 +505,7 @@ export default function FleetPageClient() {
                   aria-label="Select all visible configurations"
                   checked={allVisibleSelected}
                   indeterminate={someVisibleSelected}
-                  onCheckedChange={(checked) => toggleSelectAllVisible(Boolean(checked))}
+                  onCheckedChange={handleSelectAllVisible}
                   disabled={loading || items.length === 0}
                 />
               </TableHead>
