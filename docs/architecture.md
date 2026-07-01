@@ -4,13 +4,13 @@
 
 Monolithic repo with three layers:
 
-1. **Pipeline** (`pipeline/`) — discovers and extracts aircraft hardware features from [AeroLOPA](https://www.aerolopa.com/) for EK, BA, AI via embedded JSON + LLM normalization
+1. **Pipeline** (`pipeline/`) — discovers and extracts aircraft hardware features from [AeroLOPA](https://www.aerolopa.com/) (core airlines `ek`, `ba`, `ai`; any AeroLOPA slug via CLI or UI) via embedded JSON + LLM normalization
 2. **Backend** (`backend/`) — FastAPI REST API serving aggregated data from Postgres
 3. **Frontend** (`frontend/`) — Next.js + shadcn/ui comparison dashboard
 
-**In scope (Phase 1):** Aircraft hardware features (pipeline + DB + API + 3 UI views).
+**In scope (Phase 1):** Aircraft hardware features (pipeline + DB + API + fleet/compare UI).
 
-**In scope (Phase 2):** Cabin-class *flight* features (baggage, lounge, amenities) at airline × cabin level — LLM research pipeline, DB tables, API extensions, aircraft detail flight panel, and **Airline Cabin Comparison** UI with column editing.
+**In scope (Phase 2):** Cabin-class *flight* features (baggage, lounge, amenities) at airline × cabin level — LLM research pipeline, DB tables, API extensions, aircraft detail flight panel, **Airline Cabin Comparison** UI with column editing, and **web-triggered pipeline runs** from View 1 (Extract Airline).
 
 See [Key design decisions](#key-design-decisions) for rationale behind major choices. Update that section and the [Change log](#change-log) when scope, stack, or architecture changes.
 
@@ -25,7 +25,7 @@ flight-benchmarking/
 │   │   ├── auth.py              # single-password edit auth (HMAC session tokens)
 │   │   ├── db/                  # SQLAlchemy engine, session, Neon URL normalization
 │   │   ├── models/              # ORM models
-│   │   └── routers/             # airlines, aircraft, compare, flight_features, export, aircraft_grouping
+│   │   └── routers/             # airlines, aircraft, compare, flight_features, export, pipeline, aircraft_grouping
 │   └── alembic/                 # migrations
 ├── pipeline/
 │   ├── config.py                # target airlines, rate limits
@@ -41,31 +41,38 @@ flight-benchmarking/
 │   ├── flight_load.py           # upsert flight_feature_sources + airline_cabin_flight_features
 │   ├── load.py                  # upsert aircraft; get_or_create_airline (name preservation)
 │   ├── prompts/                 # EPD-style LLM prompts + typed output schema
-│   ├── run.py                   # aircraft CLI orchestrator
-│   └── run_flight.py            # flight features CLI orchestrator
+│   ├── run.py                   # aircraft CLI + execute_hardware_pipeline (API-shared)
+│   └── run_flight.py            # flight CLI + execute_flight_pipeline (API-shared)
 ├── frontend/                    # Next.js 14+ App Router + shadcn/ui
 │   ├── app/
-│   │   ├── page.tsx             # View 1: airline fleet summary
+│   │   ├── page.tsx             # View 1: airline fleet summary (server shell + AirlineDashboard)
 │   │   ├── fleet/               # View 2: fleet table + selection/export + infinite scroll
 │   │   ├── compare/             # View 3: aircraft side-by-side comparison + edit
 │   │   │   └── airlines/        # View 4: airline cabin comparison + edit
 │   │   └── aircraft/[svg_id]/   # Aircraft detail (hardware + flight features)
 │   ├── components/
 │   │   ├── ui/                  # shadcn primitives (table, card, badge, dialog, etc.)
+│   │   ├── airline-dashboard.tsx       # View 1 client: Extract Airline + Airlines table
+│   │   ├── airline-extract-section.tsx # slug input + extract/update pipeline triggers
+│   │   ├── airline-summary-table.tsx   # airlines metrics table (read-only)
+│   │   ├── pipeline-trigger-button.tsx # authenticated pipeline run + status
+│   │   ├── sign-in-dialog.tsx          # shared edit-auth dialog
 │   │   ├── multi-select-filter.tsx
 │   │   ├── airline-compare-selector.tsx  # chip-based airline picker (URL-synced)
 │   │   ├── compare-column-editor.tsx     # aircraft compare edit cells
 │   │   ├── flight-compare-cell.tsx       # airline compare edit cells
 │   │   └── ...                  # PageHeader, MetricCard, AppShell, AirlineBadge, etc.
 │   ├── lib/
-│   │   ├── api.ts               # typed fetch client + auth + CSV download
+│   │   ├── api.ts               # typed fetch client + auth + pipeline triggers + CSV download
 │   │   ├── use-edit-auth.ts     # compare edit session hook (aircraft + airline)
+│   │   ├── use-pipeline-run.ts    # pipeline run polling (used via PipelineRunProvider)
+│   │   ├── pipeline-run-context.tsx # shared active-run state for trigger buttons
 │   │   ├── compare-fields.ts    # aircraft field types/labels (mirrors shared/compare_fields.py)
 │   │   ├── flight-fields.ts     # flight field types/labels (mirrors shared/flight_fields.py)
 │   │   ├── constants.ts         # MIN/MAX compare limits, FLEET_PAGE_SIZE
 │   │   └── design-tokens.ts     # table density, cabin keys, compare column classes
 │   └── components.json          # shadcn config
-├── tests/                       # API, compare, export, flight update, airline upsert tests
+├── tests/                       # API, compare, export, flight update, pipeline trigger, airline upsert tests
 ├── scripts/                     # reset_schema, deck migration, verification helpers
 ├── docs/
 │   ├── architecture.md
@@ -106,15 +113,21 @@ flowchart LR
         API[routers]
     end
     subgraph ui [Next.js]
-        V1[Airline summary]
+        V1[Airline summary + Extract Airline]
         V2[Fleet]
         V3[Compare aircraft]
         V4[Compare airline]
+    end
+    subgraph apiTrigger [Authenticated API triggers]
+        PH[POST pipeline/hardware]
+        PF[POST pipeline/flight]
     end
     L --> T1 & T2 & T3
     LF --> T1 & T4
     T1 & T2 & T3 & T4 --> API
     API --> V1 & V2 & V3 & V4
+    PH --> pipelineA
+    PF --> pipelineF
 ```
 
 **Incremental updates:** Store `last_updated` (from AeroLOPA JSON) and `fetched_at` per config. By default, re-runs extract and upsert all discovered configs (refreshing existing DB rows). Use `--skip-existing` to skip fetch/parse/LLM for configs already in the database and only backfill net-new `svg_id`s.
@@ -123,7 +136,7 @@ flowchart LR
 
 | Stage | Module | Description |
 |-------|--------|-------------|
-| Discover | `pipeline/discover.py` | List config URLs per airline from `/ek`, `/ba`, `/ai` |
+| Discover | `pipeline/discover.py` | List config URLs per airline slug on AeroLOPA (e.g. `/ek`, `/ba`, `/ai`, or any slug such as `/cx`) |
 | Fetch | `pipeline/fetch.py` | Download HTML to `data/raw/{svg_id}.html` |
 | Parse | `pipeline/parse_json.py` | Extract embedded Next.js aircraft JSON |
 | Normalize | `pipeline/normalize.py` | Deterministic base + Langchain/Gemini deep-merge |
@@ -176,7 +189,7 @@ If DB rows look sparse, inspect `data/parsed/*.normalized.json` first. Normaliza
 
 ### Discovery (`pipeline/discover.py`)
 
-- For each slug (`ek`, `ba`, `ai`): `GET https://www.aerolopa.com/{slug}`
+- For each slug (`ek`, `ba`, `ai`, or any AeroLOPA slug such as `cx`): `GET https://www.aerolopa.com/{slug}`
 - Extract config URLs from `href="/{slug}-..."` links; for dual-deck types, also parse `aircraft_code` from embedded RSC JSON to catch `-m`/`-u` deck pages
 - Persist discovered URLs in `pipeline_runs` / `source_pages` tracking table
 
@@ -210,15 +223,20 @@ If DB rows look sparse, inspect `data/parsed/*.normalized.json` first. Normaliza
 
 ### CLI (`pipeline/run.py`)
 
+Core orchestration lives in `execute_hardware_pipeline(db, run_record, airlines, ...)` — shared by the CLI and `POST /api/v1/pipeline/hardware`. The CLI creates a `PipelineRun` row and calls execute; the API pre-creates the row and runs execute in a background thread.
+
 ```bash
 # From repo root (with .env configured)
 poetry install
 python -m pipeline.run --airlines ek,ba,ai
+python -m pipeline.run --airlines cx              # any AeroLOPA slug
 python -m pipeline.run --airlines ek --limit 5 --skip-existing   # backfill only net-new configs
 python -m pipeline.run --airlines ek --limit 5 --force           # dev: re-fetch from AeroLOPA
 ```
 
 ### Flight features pipeline (`pipeline/run_flight.py`)
+
+Core orchestration lives in `execute_flight_pipeline(db, run_record, airlines, ...)` — shared by the CLI and `POST /api/v1/pipeline/flight`.
 
 | Stage | Module | Description |
 |-------|--------|-------------|
@@ -229,11 +247,25 @@ python -m pipeline.run --airlines ek --limit 5 --force           # dev: re-fetch
 
 ```bash
 python -m pipeline.run_flight --airlines ek,ba,ai
+python -m pipeline.run_flight --airlines cx       # any AeroLOPA slug
 python -m pipeline.run_flight --airlines ek --force         # re-run LLM research
 python -m pipeline.run_flight --airlines ek --skip-existing # skip airlines already in DB
 ```
 
-Requires `GOOGLE_API_KEY` and `LLM_MODEL` (default `gemini-2.5-pro`). Google Search grounding is billed per prompt on Gemini 2.5.
+Requires `GOOGLE_API_KEY` and `LLM_MODEL` (default `gemini-2.5-pro`). Google Search grounding is billed per prompt on Gemini 2.5. Set `GOOGLE_API_KEY` on Railway when using the flight pipeline trigger from the UI.
+
+### Web-triggered pipelines (`backend/app/routers/pipeline.py`)
+
+Signed-in users (same `require_edit_auth` as compare PATCH) can start pipelines from the **Extract Airline** section on View 1. Runs execute in a daemon background thread; the client polls `GET /api/v1/pipeline/runs/{run_id}` (or `/active` on page load).
+
+| Behaviour | Detail |
+|-----------|--------|
+| Concurrency | `409` if any `pipeline_runs` row has `finished_at IS NULL` |
+| Request body | `PipelineTriggerRequest`: `{ airlines: string[], force?: bool, skip_existing?: bool }` |
+| Response | `202` + `PipelineRunResponse` (`status`: `running` \| `completed` \| `failed`) |
+| Audit | Same `pipeline_runs` table as CLI; `pipeline_type` = `hardware` \| `flight` |
+
+**Extract vs update (UI):** **Extract** buttons send `skip_existing: false` (new airline or full re-run). **Update** buttons send `skip_existing: true` (incremental backfill for configs/airlines already in DB). Both use the same AeroLOPA slug input — no table row selection.
 
 ## Database schema
 
@@ -244,7 +276,7 @@ Schema: `benchmarking` in Neon Postgres (database name from your Neon project, e
 | `airlines` | Airline metadata | `id` UUID PK, `slug`, `iata_code`, `name` |
 | `aircraft_configurations` | Aircraft-level features | `id` UUID PK, `svg_id` unique, `airline_id` UUID FK, `source_url`, `aircraft_type`, `configuration`, dual-deck cols (`is_dual_deck`, `deck`, `parent_svg_id`, `deck_state`, `decks` JSONB), `seat_counts` JSONB, `wifi` JSONB, `ife_*`, `last_updated`, `fetched_at`, `updated_at` |
 | `cabin_configurations` | Cabin-level features | `id` UUID PK, `aircraft_id` UUID FK, `deck`, `cabin_key` (unique per aircraft+deck), pitch/width/recline, USB, power, `layout`, seat fields |
-| `pipeline_runs` | Audit trail | `id` UUID PK, `started_at`, `airlines`, `configs_discovered`, `configs_updated` |
+| `pipeline_runs` | Audit trail | `id` UUID PK, `pipeline_type` (`hardware` \| `flight`), `started_at`, `finished_at`, `airlines` JSONB, `configs_discovered`, `configs_updated`, `configs_skipped`, `errors` JSONB |
 | `flight_feature_sources` | Curated/discovered airline product page URLs | `airline_id` FK, `url`, `source_type`, `page_type`, `cabin_keys` JSONB, `title`, `http_status`, `fetched_at` |
 | `airline_cabin_flight_features` | Airline × cabin flight benefits | `airline_id` + `cabin_key` unique, typed baggage/priority/lounge/amenity cols, `source_url` (primary research reference), `extra_features` JSONB |
 
@@ -263,9 +295,9 @@ Base URL: `http://localhost:8000`
 | Endpoint | View | Returns |
 |----------|------|---------|
 | `GET /health` | — | Health check |
-| `POST /api/v1/auth/login` | Compare edit | `{ token }` — HMAC-signed session token (8h TTL); 503 if `EDIT_PASSWORD` unset |
-| `GET /api/v1/auth/me` | Compare edit | `{ authenticated }` — validates Bearer token; returns `authenticated: true` when edit auth disabled |
-| `POST /api/v1/auth/logout` | Compare edit | No-op server-side; client clears token |
+| `POST /api/v1/auth/login` | Edit auth + pipeline | `{ token }` — HMAC-signed session token (8h TTL); 503 if `EDIT_PASSWORD` unset |
+| `GET /api/v1/auth/me` | Edit auth + pipeline | `{ authenticated }` — validates Bearer token; returns `authenticated: true` when edit auth disabled |
+| `POST /api/v1/auth/logout` | Edit auth + pipeline | No-op server-side; client clears token |
 | `GET /api/v1/airlines/summary` | Summary | Per-airline: fleet count, haul/manufacturer breakdown, aircraft types, last pipeline update |
 | `GET /api/v1/aircraft` | Fleet detail | Grouped list (dual-deck merged); query params: `airline` and `aircraft_type` (comma-separated multi-value), `haul_type`, `manufacturer`, `search`, `has_premium_economy=true`, `offset`, `limit` |
 | `GET /api/v1/aircraft/filter-options` | Fleet filters | Canonical `haul_types` and distinct `manufacturers` for Fleet multi-select filters |
@@ -274,9 +306,9 @@ Base URL: `http://localhost:8000`
 | `GET /api/v1/compare/airlines?slugs=ek,ba&cabin=business` | Airline compare | `CompareAirlineResponse`: flight benefits across 2–8 airlines; includes **Reference URL** row (`field_key=source_url`) |
 | `PATCH /api/v1/aircraft/{svg_id}` | Aircraft compare edit | Partial update of hardware fields only; returns `AircraftDetailResponse` |
 | `PATCH /api/v1/airlines/{slug}/flight-features?cabin=business` | Airline compare edit | Partial update of flight fields + optional `source_url`; returns `CabinFlightFeatures`; same `require_edit_auth` as aircraft PATCH |
-| `POST /api/v1/pipeline/hardware` | Pipeline trigger | Start per-airline hardware extraction in background; `require_edit_auth`; body `{ airlines, force?, skip_existing? }`; returns `202` + `PipelineRunResponse` |
-| `POST /api/v1/pipeline/flight` | Pipeline trigger | Start per-airline flight features research in background; same auth/body shape as hardware trigger |
-| `GET /api/v1/pipeline/runs/{run_id}` | Pipeline status | Poll run progress (`running` / `completed` / `failed`); `require_edit_auth` |
+| `POST /api/v1/pipeline/hardware` | Pipeline trigger | Start per-airline hardware extraction in background; `require_edit_auth`; body `PipelineTriggerRequest`; returns `202` + `PipelineRunResponse` |
+| `POST /api/v1/pipeline/flight` | Pipeline trigger | Start per-airline flight features research in background; same auth/body shape |
+| `GET /api/v1/pipeline/runs/{run_id}` | Pipeline status | Poll run progress; `require_edit_auth` |
 | `GET /api/v1/pipeline/runs/active` | Pipeline status | Current in-progress run or `null`; `require_edit_auth` |
 | `GET /api/v1/export.csv?ids=ek-359g,ba-19a` | Fleet export | CSV — one row per cabin per config (hardware fields) |
 
@@ -303,6 +335,13 @@ Base URL: `http://localhost:8000`
 
 Field coercion: `shared/flight_fields.coerce_flight_field_value` (string/int/list; `amenity_kit` accepts comma-separated or JSON array).
 
+**Pipeline trigger schemas** (`shared/schemas.py`):
+
+| Model | Purpose |
+|-------|---------|
+| `PipelineTriggerRequest` | `airlines`, optional `force`, `skip_existing` |
+| `PipelineRunResponse` | `id`, `pipeline_type`, `status`, timestamps, counts, `errors` |
+
 **Performance choices:**
 
 - Summary endpoint uses SQL aggregations (not N+1)
@@ -321,15 +360,28 @@ Field coercion: `shared/flight_fields.coerce_flight_field_value` (string/int/lis
 - **Color palette:** Linear light theme in `frontend/app/globals.css` — canvas `#f7f8f8`, panels `#ffffff`, accent `#5e6ad2`, hairline borders `rgba(0,0,0,0.08)`. Semantic label colors (`--label-red`, `--label-blue`, etc.) for airline badges.
 - **Layout inspiration:** [LCM Hub](https://www.lcmhub.com) — section eyebrows, metric-first dashboards, card-contained data panels, consistent page template across views.
 - **Typography:** Inter (UI) + Geist Mono (config IDs); compact `text-sm` base, `text-xs` tables.
-- **Tokens:** `frontend/lib/design-tokens.ts` — table density classes, control widths, cabin keys, airline label mappings, `COMPARE_AIRLINE_COLUMN_CLASS` / `COMPARE_FEATURE_COLUMN_CLASS` (fixed-width wrapping columns for airline compare; requires `table-fixed` on the table)
+- **Tokens:** `frontend/lib/design-tokens.ts` — table density classes, control widths, cabin keys, airline label mappings, `COMPARE_AIRLINE_COLUMN_CLASS` / `COMPARE_FEATURE_COLUMN_CLASS` (fixed-width wrapping columns for **both** airline and aircraft compare; requires `table-fixed` on the table)
 - **Core shadcn components:** `table`, `card`, `badge`, `button`, `select`, `input`, `checkbox`, `tabs`, `separator`, `skeleton`, `tooltip`, `dialog`
-- **App-level composites:** `PageHeader`, `MetricCard`, `SectionCard`, `EmptyState`, `LoadingState`, `TableToolbar`, `AirlineBadge`, `MultiSelectFilter`, `AirlineCompareSelector`, `CompareValueCell` / `CompareFieldInput`, `FlightCompareValueCell` / `FlightCompareFieldInput`
+- **App-level composites:** `PageHeader`, `MetricCard`, `SectionCard`, `EmptyState`, `LoadingState`, `TableToolbar`, `AirlineBadge`, `AirlineDashboard`, `AirlineExtractSection`, `PipelineTriggerButton`, `SignInDialog`, `MultiSelectFilter`, `AirlineCompareSelector`, `CompareValueCell` / `CompareFieldInput`, `FlightCompareValueCell` / `FlightCompareFieldInput`
 - **Page template:** `PageHeader` → optional `MetricCard` grid → `SectionCard`(s) with edge-to-edge table; shared empty/loading states
-- **Layout shell:** `AppShell` with shadcn `Tabs` (line variant) for **Airline** / **Fleet** / **Compare Aircraft** / **Compare Airline** navigation; subtitle **Features Comparison**
+- **Layout shell:** `AppShell` with shadcn `Tabs` (line variant) for **Airline** / **Fleet** / **Compare Aircraft** / **Compare Airline** navigation; subtitle **Features Comparison**; `PipelineRunProvider` wraps page content for shared pipeline run polling
 
 ### View 1 — Airline Fleet Summary (`/`)
 
-- `PageHeader` + `MetricCard` grid + `SectionCard` with airline `Table`
+Server component renders `PageHeader`, `MetricCard` grid, and client `AirlineDashboard` (`PipelineRunProvider` wraps the app shell).
+
+**Extract Airline** (`SectionCard`):
+
+- Compact toolbar: AeroLOPA **slug** input (e.g. `cx`) + four actions when signed in:
+  - **Extract hardware** / **Extract flight** — `skip_existing: false` (new airline or full re-run)
+  - **Update hardware** / **Update flight** — `skip_existing: true` (incremental)
+- Calls `POST /api/v1/pipeline/hardware` or `/flight`; polls run status; refreshes summaries on completion
+- **Sign in** when `EDIT_PASSWORD` is set (same token as compare edit)
+- Discovery accepts **any** AeroLOPA slug, not only `ek` / `ba` / `ai`
+
+**Airlines** (`SectionCard`):
+
+- Read-only metrics `Table` (no pipeline controls on rows)
 - Columns: Airline, Configurations, Long Haul Aircraft, Short Haul Aircraft, Airbus Aircraft, Boeing Aircraft, Other Aircraft, Last Updated (dates formatted `en-GB`, e.g. `30 Jun 2026`)
 - Haul/manufacturer counts computed server-side in `airlines.py` from grouped aircraft configs
 - Click airline → navigate to Fleet with airline filter pre-applied
@@ -373,8 +425,8 @@ flowchart LR
 
 - Requires `?ids=` with 2–8 comma-separated `svg_id`s (typically navigated from Fleet)
 - `PageHeader` with **Sign in to edit** / **Sign out**, **Edit selection** link (back to `/fleet?ids=...`), and cabin `Tabs` (First / Business / Premium Economy / Economy)
-- **Edit auth:** when backend `EDIT_PASSWORD` is set, user signs in via password dialog; token stored in `sessionStorage` and sent as `Authorization: Bearer` on `PATCH`; when unset (local dev), edits are open without login
-- `SectionCard` compare `Table`: rows = features; columns = selected configs (wider min-width for up to 8 columns)
+- **Edit auth:** when backend `EDIT_PASSWORD` is set, user signs in via password dialog; token stored in `sessionStorage` and sent as `Authorization: Bearer` on `PATCH`; when unset (local dev), edits are open without login. Pipeline triggers use the same auth (UI only on View 1 — not on compare pages).
+- `SectionCard` compare `Table` with `table-fixed`, `COMPARE_FEATURE_COLUMN_CLASS` on the feature column, `COMPARE_AIRLINE_COLUMN_CLASS` on config columns (`w-40` / `w-48`, wrapping via `min-w-0` cell wrappers)
 - Column headers use `CompareResponse.columns` — airline badge, aircraft type, config code, layout, AeroLOPA link, **Edit / Save / Cancel** for column edit mode
 - **Column edit mode:** click **Edit** on a column header or any value cell in that column (requires auth when configured); all compare-visible fields in the column become typed inputs (`CompareFieldInput`); **Save** sends one `PATCH /api/v1/aircraft/{svg_id}` with dirty fields only; **Cancel** or `Escape` discards pending changes
 - Highlight differences with `bg-muted/60` and outline `Badge` (view mode)
@@ -425,7 +477,7 @@ poetry run pytest tests/
 | Component | Target | Config |
 |-----------|--------|--------|
 | Frontend | Vercel | Root directory `frontend`, set `NEXT_PUBLIC_API_URL` |
-| Backend | Railway | [`railway.toml`](../railway.toml), [`nixpacks.toml`](../nixpacks.toml); set `DATABASE_URL`, `CORS_ORIGINS`, `CORS_ORIGIN_REGEX`, `EDIT_PASSWORD`, `SESSION_SECRET` |
+| Backend | Railway | [`railway.toml`](../railway.toml), [`nixpacks.toml`](../nixpacks.toml); set `DATABASE_URL`, `CORS_ORIGINS`, `CORS_ORIGIN_REGEX`, `EDIT_PASSWORD`, `SESSION_SECRET`, `GOOGLE_API_KEY` (required for flight pipeline triggers) |
 
 Step-by-step guide: [deployment.md](./deployment.md).
 
@@ -437,11 +489,11 @@ Secrets documented in [`.env.example`](../.env.example): `DATABASE_URL`, `DB_SCH
 |----------|---------|---------|
 | `DATABASE_URL` | Pipeline, backend | Neon pooled Postgres connection (auto-normalized to `postgresql+psycopg`) |
 | `DB_SCHEMA` | Backend | Postgres schema name (default `benchmarking`) |
-| `GOOGLE_API_KEY` | Pipeline | Gemini API key for LLM normalization (optional — falls back to deterministic) |
+| `GOOGLE_API_KEY` | Pipeline, Railway backend | Gemini API key for LLM normalization and flight research; required on Railway for **Extract flight** UI triggers |
 | `LLM_MODEL` | Pipeline | Gemini model id (default `gemini-2.5-pro`) |
 | `CORS_ORIGINS` | Backend | Comma-separated allowed frontend origins |
 | `CORS_ORIGIN_REGEX` | Backend | Regex for Vercel preview domains (e.g. `https://.*\.vercel\.app`) |
-| `EDIT_PASSWORD` | Backend | Shared password for compare edit; when empty, PATCH is open (local dev) |
+| `EDIT_PASSWORD` | Backend | Shared password for compare edit and pipeline triggers; when empty, PATCH and pipeline POST are open (local dev) |
 | `SESSION_SECRET` | Backend | HMAC signing key for edit session tokens; falls back to hash of `EDIT_PASSWORD` |
 | `NEXT_PUBLIC_API_URL` | Frontend | Backend base URL baked at Vercel build time |
 
@@ -456,7 +508,8 @@ See [`.env.example`](../.env.example).
 | DB schema + Alembic migrations (incl. dual-deck + flight features) | Done |
 | Aircraft pipeline discover + fetch + parse + normalize + load | Done |
 | Flight pipeline research + load (`run_flight.py`) | Done |
-| FastAPI backend (summary, fleet, compare, airline compare, export, auth) | Done |
+| FastAPI backend (summary, fleet, compare, airline compare, export, auth, pipeline triggers) | Done |
+| Web UI pipeline triggers (Extract Airline on View 1) | Done |
 | Dual-deck API grouping (`aircraft_grouping.py`) | Done |
 | Next.js frontend (4 views + fleet infinite scroll + CSV export) | Done |
 | Aircraft compare edit auth + column PATCH | Done |
@@ -470,14 +523,15 @@ See [`.env.example`](../.env.example).
 2. DB + migrations — tables and seed from pipeline
 3. Pipeline — discover → fetch → parse → normalize → load (validate with `ek-359g` first)
 4. API — endpoints against real data
-5. Frontend — shadcn/ui setup + three views wired to API
+5. Frontend — shadcn/ui setup + four views wired to API
 6. Docs + deploy configs — architecture.md, `.env.example`, Vercel/Railway files
 
 ## Open items
 
 - **Gemini API key** — provide `GOOGLE_API_KEY` locally for LLM normalization
 - **Air India slug** — verify AeroLOPA uses `ai` during discovery; adjust config if different
-- **Production edit auth** — set `EDIT_PASSWORD` and `SESSION_SECRET` on Railway before enabling compare edits in production
+- **Production edit auth** — set `EDIT_PASSWORD` and `SESSION_SECRET` on Railway before enabling compare edits and pipeline triggers in production
+- **Flight pipeline on Railway** — set `GOOGLE_API_KEY` for Extract flight / `run_flight` triggers
 
 ## Key design decisions
 
@@ -487,20 +541,20 @@ Track significant architectural choices here. When a decision is reversed, mark 
 |----|----------|-----------|-------------------------|------|
 | KD-001 | **Monolithic repo** — pipeline, backend, frontend, and shared schemas in one repository | Simpler local dev, shared Pydantic models, single PR workflow for Phase 1 | Separate repos per service; polyrepo with published schema package | 2026-06-29 |
 | KD-002 | **Phase 1 scope: aircraft hardware only** — defer readme section [2] cabin-class *flight* features (check-in, baggage, etc.) | Unblocks end-to-end pipeline + comparison UI on a single data source (AeroLOPA) before adding second source and schema | Build both sections in parallel | 2026-06-29 — **Superseded** by Phase 2 (2026-06-30) |
-| KD-003 | **Target airlines:** `ek`, `ba`, `ai` on AeroLOPA | Core benchmarking set for Emirates competitive analysis | Broader airline list in Phase 1 | 2026-06-29 |
+| KD-003 | **Target airlines:** `ek`, `ba`, `ai` on AeroLOPA (default benchmarking set) | Core benchmarking set for Emirates competitive analysis | Broader airline list in Phase 1 | 2026-06-29 — partial **Superseded** by KD-027 (any slug via UI/CLI, 2026-07-01) |
 | KD-004 | **Parse embedded Next.js JSON first; LLM only for normalization** — not LLM-on-raw-HTML as primary path | Deterministic extraction from `self.__next_f.push(...)` payloads is cheaper, faster, and more reproducible; LLM maps irregular fields into [`output.py`](../output.py) shape | Full HTML → LLM extraction; rules-only mapping without LLM | 2026-06-29 |
 | KD-005 | **Gemini via Langchain** — default `gemini-2.5-pro`, swappable via `LLM_MODEL` | Matches readme requirement; Langchain gives model swap without code changes | Direct Google SDK only; other providers in Phase 1 | 2026-06-29 |
 | KD-006 | **`svg_id` as natural key** (e.g. `ek-359g`) for aircraft configurations | Stable AeroLOPA identifier; used in URLs, raw HTML paths, and compare UI | Composite key (airline + aircraft_type + config code) | 2026-06-29 |
 | KD-007 | **Postgres `benchmarking` schema** on Neon cloud Postgres | Managed Postgres with SSL; isolates tables via schema namespace; same DB for local dev and Railway deploy | Local `emirates` database; SQLite for dev | 2026-06-29 (updated 2026-06-30) |
 | KD-008 | **JSONB for nested aircraft fields** — `seat_counts`, `wifi`, `seat_rating_summary` | Avoids wide sparse tables; matches document-shaped source data | Fully normalized child tables for every nested object | 2026-06-29 |
 | KD-009 | **Incremental pipeline** — `--skip-existing` skips extraction for configs already in DB; default always upserts after extraction | Reduces HTTP load, LLM cost, and re-run time when backfilling net-new configs | Always full re-fetch; cron-only freshness | 2026-06-29 |
-| KD-010 | **Manual CLI pipeline** (`python -m pipeline.run`) for Phase 1 | No scheduler/queue infra until refresh cadence is defined | Scheduled job (Railway cron, Airflow) in Phase 1 | 2026-06-29 |
+| KD-010 | **Manual CLI pipeline** (`python -m pipeline.run`) for Phase 1 | No scheduler/queue infra until refresh cadence is defined | Scheduled job (Railway cron, Airflow) in Phase 1 | 2026-06-29 — **Superseded** by KD-027 (2026-07-01) |
 | KD-011 | **Raw HTML audit trail** at `data/raw/{svg_id}.html` | Replay and debug parse/normalize without re-scraping; supports future LLM-on-HTML fallback | Fetch-only, no local cache | 2026-06-29 |
 | KD-012 | **Shared schemas** in [`shared/schemas.py`](../shared/schemas.py) imported by pipeline and backend | Single validation contract from extraction through API | Duplicate Pydantic models per layer | 2026-06-29 |
 | KD-013 | **FastAPI compare endpoint returns pre-pivoted rows** (`CompareResponse`: `columns` + `rows`) | Frontend renders table headers from `columns` and feature cells from `rows`; no client-side pivot or per-column detail fetches | Client-side pivot; GraphQL field selection | 2026-06-29 (updated 2026-06-30) |
 | KD-017 | **Fleet-primary cross-airline comparison** — selection on Fleet via `?ids=`; Compare supports per-config column editing with batch save; optional password auth gates PATCH | Keeps one selection affordance; URL-shared state survives refresh; manual corrections via single PATCH per save; production edits protected by `EDIT_PASSWORD` | Config picker on Compare; per-cell immediate save; open PATCH in production | 2026-06-30 (updated 2026-06-30) |
 | KD-018 | **Dual-deck grouping at API layer** — deck pages (`-m`/`-u`) stored separately; list/detail/compare merge by `parent_svg_id` | Matches AeroLOPA page model; accurate per-deck cabin data; single logical row in Fleet/Compare | Store only merged rows in DB; client-side deck merge | 2026-06-30 |
-| KD-019 | **Single-password edit auth** — `EDIT_PASSWORD` + HMAC session tokens (`SESSION_SECRET` or derived secret); 8h TTL | Lightweight protection for manual compare corrections without full user management | OAuth; API keys per user; no auth | 2026-06-30 |
+| KD-019 | **Single-password edit auth** — `EDIT_PASSWORD` + HMAC session tokens (`SESSION_SECRET` or derived secret); 8h TTL; gates compare PATCH and pipeline POST | Lightweight protection for manual compare corrections and operator-triggered pipeline runs without full user management | OAuth; API keys per user; no auth | 2026-06-30 (updated 2026-07-01) |
 | KD-020 | **Fleet CSV export** — `GET /api/v1/export.csv` for selected `svg_id`s; one row per cabin class | Offline analysis and stakeholder sharing without custom scripts | Client-side JSON export only | 2026-06-30 |
 | KD-021 | **Compare limit raised to 8 configs** — `MAX_COMPARE_CONFIGS` shared constant | Supports wider cross-carrier benchmarking (e.g. multiple A380 configs) | Fixed 4-config cap | 2026-06-30 |
 | KD-022 | **Multi-select fleet filters** — comma-separated `airline` / `aircraft_type` query params + premium economy toggle | Cross-carrier discovery without repeated filter changes | Single-select only | 2026-06-30 |
@@ -508,6 +562,7 @@ Track significant architectural choices here. When a decision is reversed, mark 
 | KD-024 | **Airline name preservation on upsert** — `get_or_create_airline` skips code-like name overwrites | Aircraft pipeline display names survive `run_flight` for airlines outside `AIRLINE_NAMES` map | Always overwrite `airlines.name`; expand `AIRLINE_NAMES` manually | 2026-06-30 |
 | KD-025 | **Separate airline compare edit API** — `PATCH /api/v1/airlines/{slug}/flight-features` with `AirlineFlightFeaturesUpdate` | Flight benefits edited per airline × cabin without touching aircraft hardware rows | Reuse aircraft PATCH; store edits only in client | 2026-06-30 |
 | KD-026 | **Airline compare chip selector** — `AirlineCompareSelector` with URL-synced `?slugs=`; dedicated filter `SectionCard` above features table | Clear separation of airline pick vs cabin tabs; full-width chip row; table-only features card | MultiSelectFilter in page header; selector inside table card | 2026-06-30 |
+| KD-027 | **Authenticated pipeline triggers from UI** — `POST /api/v1/pipeline/*`, background thread + `pipeline_runs` poll; **Extract Airline** slug toolbar on View 1 (`skip_existing` false = extract, true = update); compare pages edit-only (no pipeline buttons) | Operators can add new AeroLOPA airlines without CLI; incremental update via same slug input; reuses edit auth | Checkbox bulk select; pipeline triggers on compare pages; job queue (Celery) | 2026-07-01 |
 | KD-014 | **Slim API DTOs** — no raw HTML or seat-level data in list/summary endpoints | Keeps fleet and summary views fast; detail endpoint for drill-down | Return full source payload everywhere | 2026-06-29 |
 | KD-015 | **Next.js App Router + shadcn/ui** — compact light theme, TanStack Table | Standardised design system per readme; data-dense tables inspired by Eleken/LCM Hub | MUI, Ant Design, plain Tailwind | 2026-06-29 |
 | KD-016 | **Deploy split:** frontend → Vercel, backend → Railway | Matches readme deployment targets; fits static/SSR frontend + long-running API | Single host; containerise both on Railway | 2026-06-29 |
@@ -518,6 +573,7 @@ Record notable architecture, schema, API, and deployment changes here (newest fi
 
 | Date | Change |
 |------|--------|
+| 2026-07-01 | Pipeline trigger API (`backend/app/routers/pipeline.py`): `POST /api/v1/pipeline/hardware|flight`, run status endpoints, `pipeline_type` on `pipeline_runs`, `execute_*_pipeline` shared with CLI; **Extract Airline** UI on View 1 (slug input, extract vs update); aircraft compare `table-fixed` column widths; pipeline triggers removed from compare pages — KD-027 |
 | 2026-06-30 | Airline Cabin Comparison polish: dedicated **Airlines** filter card, `table-fixed` wrapping columns (`COMPARE_AIRLINE_COLUMN_CLASS`), left-aligned cells, **Reference URL** row + link rendering, column edit via `PATCH /api/v1/airlines/{slug}/flight-features`, `FlightCompareValueCell`, `shared/flight_fields.py` — KD-025, KD-026 |
 | 2026-06-30 | Fleet infinite scroll: `FLEET_PAGE_SIZE`, `offset`/`limit` in `getAircraftList`, `IntersectionObserver` load-more, `Showing N of total` footer — KD-023 |
 | 2026-06-30 | Fleet haul type and manufacturer filters: `GET /api/v1/aircraft/filter-options`, `haul_type` / `manufacturer` query params on aircraft list |

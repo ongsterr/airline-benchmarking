@@ -30,7 +30,7 @@ poetry run python -m pipeline.run --airlines ek,ba,ai
 | `DB_SCHEMA` | `benchmarking` |
 | `CORS_ORIGINS` | `https://<your-vercel-production-domain>` (update after Vercel deploy if needed) |
 | `CORS_ORIGIN_REGEX` | `https://.*\.vercel\.app` |
-| `EDIT_PASSWORD` | Shared password for compare-page editing (required in production) |
+| `EDIT_PASSWORD` | Shared password for compare editing and pipeline triggers (required in production) |
 | `SESSION_SECRET` | Random 32+ character key for signing edit session tokens |
 
 5. Deploy and verify:
