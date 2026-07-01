@@ -6,21 +6,19 @@ import argparse
 import logging
 from datetime import datetime, timezone
 
+import httpx
 from dotenv import load_dotenv
 
 from backend.app.db.session import SessionLocal, init_schema
 from backend.app.models.entities import PipelineRun
 from pipeline.artifacts import save_artifacts
-from pipeline.config import DEFAULT_AIRLINES
+from pipeline.config import DEFAULT_AIRLINES, USER_AGENT
 from pipeline.deck import is_dual_deck_parent
 from pipeline.discover import airline_display_name, discover_all
 from pipeline.fetch import fetch_config_html, load_cached_html
 from pipeline.load import get_existing_svg_ids, upsert_aircraft
 from pipeline.normalize import normalize_with_llm
 from pipeline.parse_json import extract_aircraft_json
-
-import httpx
-from pipeline.config import USER_AGENT
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -71,25 +69,17 @@ def process_config(
     return "ok", detail
 
 
-def run(
+def execute_hardware_pipeline(
+    db,
+    run_record: PipelineRun,
     airlines: list[str],
     force: bool = False,
     limit: int = 0,
     skip_existing: bool = False,
 ) -> None:
-    load_dotenv()
-    init_schema()
-
-    from backend.app.db.session import engine
-    from backend.app.models.entities import Base
-
-    Base.metadata.create_all(bind=engine)
-
-    db = SessionLocal()
-    started = datetime.now(timezone.utc)
-    run_record = PipelineRun(started_at=started, airlines=airlines)
-    db.add(run_record)
-    db.flush()
+    """Run hardware extraction for airlines and update the given pipeline run record."""
+    run_record.airlines = airlines
+    run_record.pipeline_type = "hardware"
 
     discovered = discover_all(airlines)
     all_configs: list[tuple[str, str]] = []
@@ -138,10 +128,38 @@ def run(
     run_record.configs_skipped = skipped
     run_record.errors = errors or None
     run_record.finished_at = datetime.now(timezone.utc)
-    db.commit()
-    db.close()
 
     logger.info("Done: %d updated, %d skipped (already loaded), %d errors", updated, skipped, len(errors))
+
+
+def run(
+    airlines: list[str],
+    force: bool = False,
+    limit: int = 0,
+    skip_existing: bool = False,
+) -> None:
+    load_dotenv()
+    init_schema()
+
+    from backend.app.db.session import engine
+    from backend.app.models.entities import Base
+
+    Base.metadata.create_all(bind=engine)
+
+    db = SessionLocal()
+    started = datetime.now(timezone.utc)
+    run_record = PipelineRun(started_at=started, airlines=airlines, pipeline_type="hardware")
+    db.add(run_record)
+    db.flush()
+
+    try:
+        execute_hardware_pipeline(db, run_record, airlines, force, limit, skip_existing)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
 
 
 def main() -> None:

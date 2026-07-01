@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PipelineRunProvider } from "@/lib/pipeline-run-context";
 
 const NAV = [
   { href: "/", label: "Airline" },
@@ -49,7 +50,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Tabs>
         </div>
       </header>
-      <main className="mx-auto max-w-screen-2xl px-6 py-6">{children}</main>
+      <main className="mx-auto max-w-screen-2xl px-6 py-6">
+        <PipelineRunProvider>{children}</PipelineRunProvider>
+      </main>
     </div>
   );
 }

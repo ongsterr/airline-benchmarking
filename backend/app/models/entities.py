@@ -213,6 +213,7 @@ class PipelineRun(Base):
     __table_args__ = {"schema": SCHEMA}
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    pipeline_type: Mapped[str] = mapped_column(String(20), default="hardware")
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     airlines: Mapped[list] = mapped_column(JSONB)

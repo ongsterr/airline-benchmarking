@@ -1,5 +1,7 @@
 """FastAPI application entry point."""
 
+import uuid
+
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -15,7 +17,7 @@ from backend.app.auth import (
 )
 
 from backend.app.config import settings
-from backend.app.db.migrate import ensure_flight_source_columns
+from backend.app.db.migrate import ensure_flight_source_columns, ensure_pipeline_run_columns
 from backend.app.db.session import engine, get_db, init_schema
 from backend.app.models.entities import Base
 from backend.app.routers import aircraft as aircraft_router
@@ -23,6 +25,7 @@ from backend.app.routers import airlines as airlines_router
 from backend.app.routers import compare as compare_router
 from backend.app.routers import export as export_router
 from backend.app.routers import flight_features as flight_features_router
+from backend.app.routers import pipeline as pipeline_router
 from shared.constants import MAX_COMPARE_CONFIGS
 from shared.schemas import (
     AircraftConfigUpdate,
@@ -34,6 +37,8 @@ from shared.schemas import (
     CabinFlightFeatures,
     CompareAirlineResponse,
     CompareResponse,
+    PipelineRunResponse,
+    PipelineTriggerRequest,
 )
 
 app = FastAPI(title="Flight Benchmarking API", version="0.1.0")
@@ -67,6 +72,7 @@ def on_startup() -> None:
     init_schema()
     Base.metadata.create_all(bind=engine)
     ensure_flight_source_columns()
+    ensure_pipeline_run_columns()
 
 
 @app.get("/health")
@@ -218,6 +224,49 @@ def update_airline_flight_features(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return result
+
+
+@app.post("/api/v1/pipeline/hardware", response_model=PipelineRunResponse, status_code=202)
+def trigger_hardware_pipeline(
+    body: PipelineTriggerRequest,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_edit_auth),
+) -> PipelineRunResponse:
+    return pipeline_router.trigger_hardware(db, body)
+
+
+@app.post("/api/v1/pipeline/flight", response_model=PipelineRunResponse, status_code=202)
+def trigger_flight_pipeline(
+    body: PipelineTriggerRequest,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_edit_auth),
+) -> PipelineRunResponse:
+    return pipeline_router.trigger_flight(db, body)
+
+
+@app.get("/api/v1/pipeline/runs/active", response_model=PipelineRunResponse | None)
+def get_active_pipeline_run(
+    db: Session = Depends(get_db),
+    _: None = Depends(require_edit_auth),
+) -> PipelineRunResponse | None:
+    active = pipeline_router.get_active_run(db)
+    return pipeline_router.pipeline_run_to_response(active) if active else None
+
+
+@app.get("/api/v1/pipeline/runs/{run_id}", response_model=PipelineRunResponse)
+def get_pipeline_run(
+    run_id: str,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_edit_auth),
+) -> PipelineRunResponse:
+    try:
+        run_uuid = uuid.UUID(run_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid run id") from exc
+    run_record = pipeline_router.get_run_by_id(db, run_uuid)
+    if not run_record:
+        raise HTTPException(status_code=404, detail="Pipeline run not found")
+    return pipeline_router.pipeline_run_to_response(run_record)
 
 
 @app.get("/api/v1/export.csv")

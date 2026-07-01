@@ -237,3 +237,26 @@ class CompareAirlineResponse(BaseModel):
 class AirlineFlightFeaturesUpdate(BaseModel):
     fields: dict[str, Any] = Field(default_factory=dict)
     source_url: str | None = None
+
+
+PipelineType = Literal["hardware", "flight"]
+PipelineRunStatus = Literal["running", "completed", "failed"]
+
+
+class PipelineTriggerRequest(BaseModel):
+    airlines: list[str]
+    force: bool = False
+    skip_existing: bool = False
+
+
+class PipelineRunResponse(BaseModel):
+    id: str
+    pipeline_type: PipelineType
+    status: PipelineRunStatus
+    started_at: datetime
+    finished_at: datetime | None = None
+    airlines: list[str]
+    configs_discovered: int = 0
+    configs_updated: int = 0
+    configs_skipped: int = 0
+    errors: list[str] | None = None

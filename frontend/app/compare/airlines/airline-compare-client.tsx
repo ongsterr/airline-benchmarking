@@ -6,20 +6,12 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AirlineBadge } from "@/components/airline-badge";
 import { AirlineCompareSelector } from "@/components/airline-compare-selector";
 import { FlightCompareValueCell } from "@/components/flight-compare-cell";
+import { SignInDialog } from "@/components/sign-in-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogPopup,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -638,64 +630,5 @@ export default function AirlineComparePageClient() {
         onSubmit={handleSignIn}
       />
     </div>
-  );
-}
-
-function SignInDialog({
-  open,
-  onOpenChange,
-  password,
-  onPasswordChange,
-  error,
-  signingIn,
-  onSubmit,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  password: string;
-  onPasswordChange: (value: string) => void;
-  error: string | null;
-  signingIn: boolean;
-  onSubmit: (e: FormEvent) => void;
-}) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogPopup>
-        <form onSubmit={onSubmit}>
-          <DialogHeader>
-            <DialogTitle>Sign in to edit</DialogTitle>
-            <DialogDescription>
-              Enter the edit password to modify airline comparison fields.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => onPasswordChange(e.target.value)}
-              autoComplete="current-password"
-              autoFocus
-            />
-            {error && (
-              <p className="mt-2 text-sm text-destructive">{error}</p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={signingIn}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={signingIn || !password}>
-              {signingIn ? "Signing in…" : "Sign in"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogPopup>
-    </Dialog>
   );
 }

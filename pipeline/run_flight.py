@@ -13,8 +13,8 @@ from backend.app.db.session import SessionLocal, init_schema
 from backend.app.models.entities import Base, PipelineRun
 from pipeline.discover import airline_display_name
 from pipeline.flight_artifacts import save_flight_artifacts
-from pipeline.flight_load import airline_has_flight_features, upsert_flight_features, upsert_flight_sources
 from pipeline.flight_config import DEFAULT_AIRLINES
+from pipeline.flight_load import airline_has_flight_features, upsert_flight_features, upsert_flight_sources
 from pipeline.flight_research import (
     extract_grounding_queries,
     merge_sources_for_upsert,
@@ -75,24 +75,16 @@ def process_airline(slug: str, db) -> tuple[str, str | None]:
     )
 
 
-def run(
+def execute_flight_pipeline(
+    db,
+    run_record: PipelineRun,
     airlines: list[str],
     force: bool = False,
     skip_existing: bool = False,
 ) -> None:
-    load_dotenv()
-    init_schema()
-
-    from backend.app.db.session import engine
-
-    Base.metadata.create_all(bind=engine)
-    ensure_flight_source_columns()
-
-    db = SessionLocal()
-    started = datetime.now(timezone.utc)
-    run_record = PipelineRun(started_at=started, airlines=airlines)
-    db.add(run_record)
-    db.flush()
+    """Run flight features research for airlines and update the given pipeline run record."""
+    run_record.airlines = airlines
+    run_record.pipeline_type = "flight"
 
     updated = 0
     skipped = 0
@@ -126,10 +118,37 @@ def run(
     run_record.configs_skipped = skipped
     run_record.errors = errors or None
     run_record.finished_at = datetime.now(timezone.utc)
-    db.commit()
-    db.close()
 
     logger.info("Done: %d updated, %d skipped, %d errors", updated, skipped, len(errors))
+
+
+def run(
+    airlines: list[str],
+    force: bool = False,
+    skip_existing: bool = False,
+) -> None:
+    load_dotenv()
+    init_schema()
+
+    from backend.app.db.session import engine
+
+    Base.metadata.create_all(bind=engine)
+    ensure_flight_source_columns()
+
+    db = SessionLocal()
+    started = datetime.now(timezone.utc)
+    run_record = PipelineRun(started_at=started, airlines=airlines, pipeline_type="flight")
+    db.add(run_record)
+    db.flush()
+
+    try:
+        execute_flight_pipeline(db, run_record, airlines, force, skip_existing)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
 
 
 def main() -> None:

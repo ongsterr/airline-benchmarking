@@ -8,6 +8,17 @@ from backend.app.config import settings
 from backend.app.db.session import engine
 
 
+def ensure_pipeline_run_columns() -> None:
+    """Add pipeline_type column to pipeline_runs if missing."""
+    schema = settings.db_schema
+    stmt = (
+        f'ALTER TABLE "{schema}".pipeline_runs '
+        f"ADD COLUMN IF NOT EXISTS pipeline_type VARCHAR(20) DEFAULT 'hardware'"
+    )
+    with engine.begin() as conn:
+        conn.execute(text(stmt))
+
+
 def ensure_flight_source_columns() -> None:
     """Add Phase 2 flight_feature_sources metadata columns if missing."""
     schema = settings.db_schema

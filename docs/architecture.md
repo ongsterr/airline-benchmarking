@@ -274,6 +274,10 @@ Base URL: `http://localhost:8000`
 | `GET /api/v1/compare/airlines?slugs=ek,ba&cabin=business` | Airline compare | `CompareAirlineResponse`: flight benefits across 2–8 airlines; includes **Reference URL** row (`field_key=source_url`) |
 | `PATCH /api/v1/aircraft/{svg_id}` | Aircraft compare edit | Partial update of hardware fields only; returns `AircraftDetailResponse` |
 | `PATCH /api/v1/airlines/{slug}/flight-features?cabin=business` | Airline compare edit | Partial update of flight fields + optional `source_url`; returns `CabinFlightFeatures`; same `require_edit_auth` as aircraft PATCH |
+| `POST /api/v1/pipeline/hardware` | Pipeline trigger | Start per-airline hardware extraction in background; `require_edit_auth`; body `{ airlines, force?, skip_existing? }`; returns `202` + `PipelineRunResponse` |
+| `POST /api/v1/pipeline/flight` | Pipeline trigger | Start per-airline flight features research in background; same auth/body shape as hardware trigger |
+| `GET /api/v1/pipeline/runs/{run_id}` | Pipeline status | Poll run progress (`running` / `completed` / `failed`); `require_edit_auth` |
+| `GET /api/v1/pipeline/runs/active` | Pipeline status | Current in-progress run or `null`; `require_edit_auth` |
 | `GET /api/v1/export.csv?ids=ek-359g,ba-19a` | Fleet export | CSV — one row per cabin per config (hardware fields) |
 
 **Aircraft compare response** (`shared/schemas.py`):

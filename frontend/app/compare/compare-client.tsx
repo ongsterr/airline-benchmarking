@@ -4,19 +4,11 @@ import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { Fragment, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
-import {
-  Dialog,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogPopup,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { SignInDialog } from "@/components/sign-in-dialog";
 import { AirlineBadge } from "@/components/airline-badge";
 import { Badge } from "@/components/ui/badge";
 import { CompareValueCell } from "@/components/compare-column-editor";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/empty-state";
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/page-header";
@@ -32,6 +24,8 @@ import {
 } from "@/components/ui/table";
 import {
   CABINS,
+  COMPARE_AIRLINE_COLUMN_CLASS,
+  COMPARE_FEATURE_COLUMN_CLASS,
   TABLE_HEAD_CLASS,
   TABLE_LINK_CLASS,
   TABLE_ROW_CLASS,
@@ -402,10 +396,12 @@ export default function ComparePageClient() {
       />
 
       <SectionCard title="Features">
-        <Table>
+        <Table className="table-fixed">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className={TABLE_HEAD_CLASS}>Feature</TableHead>
+              <TableHead className={cn(TABLE_HEAD_CLASS, COMPARE_FEATURE_COLUMN_CLASS)}>
+                Feature
+              </TableHead>
               {displayIds.map((id) => {
                 const column = columnById.get(id);
                 const isEditing = editingSvgId === id;
@@ -414,10 +410,11 @@ export default function ComparePageClient() {
                     key={id}
                     className={cn(
                       TABLE_HEAD_CLASS,
-                      "min-w-36 align-top",
+                      COMPARE_AIRLINE_COLUMN_CLASS,
                       isEditing && "bg-primary/5 ring-1 ring-inset ring-primary/20"
                     )}
                   >
+                    <div className="min-w-0">
                     {column ? (
                       <ColumnHeader
                         column={column}
@@ -433,6 +430,7 @@ export default function ComparePageClient() {
                     ) : (
                       <span className="font-mono">{id}</span>
                     )}
+                    </div>
                   </TableHead>
                 );
               })}
@@ -459,7 +457,12 @@ export default function ComparePageClient() {
                       </TableRow>
                     )}
                     <TableRow className={TABLE_ROW_CLASS}>
-                      <TableCell className="py-1.5 text-muted-foreground">
+                      <TableCell
+                        className={cn(
+                          "py-1.5 text-muted-foreground",
+                          COMPARE_FEATURE_COLUMN_CLASS
+                        )}
+                      >
                         {row.feature}
                       </TableCell>
                       {displayIds.map((id) => {
@@ -478,10 +481,12 @@ export default function ComparePageClient() {
                             key={id}
                             className={cn(
                               "py-1.5 tabular-nums",
+                              COMPARE_AIRLINE_COLUMN_CLASS,
                               diff && !isEditing && "bg-muted/60",
                               isEditing && "bg-primary/5"
                             )}
                           >
+                            <div className="min-w-0 text-left">
                             {isEditing && !isFlightRow ? (
                               <CompareValueCell
                                 fieldKey={row.field_key}
@@ -510,6 +515,7 @@ export default function ComparePageClient() {
                                 onChange={() => {}}
                               />
                             )}
+                            </div>
                           </TableCell>
                         );
                       })}
@@ -522,44 +528,15 @@ export default function ComparePageClient() {
         </Table>
       </SectionCard>
 
-      <Dialog open={signInOpen} onOpenChange={setSignInOpen}>
-        <DialogPopup>
-          <form onSubmit={handleSignIn}>
-            <DialogHeader>
-              <DialogTitle>Sign in to edit</DialogTitle>
-              <DialogDescription>
-                Enter the edit password to modify comparison fields.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-4">
-              <Input
-                type="password"
-                placeholder="Password"
-                value={signInPassword}
-                onChange={(e) => setSignInPassword(e.target.value)}
-                autoComplete="current-password"
-                autoFocus
-              />
-              {signInError && (
-                <p className="mt-2 text-sm text-destructive">{signInError}</p>
-              )}
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setSignInOpen(false)}
-                disabled={signingIn}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={signingIn || !signInPassword}>
-                {signingIn ? "Signing in…" : "Sign in"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogPopup>
-      </Dialog>
+      <SignInDialog
+        open={signInOpen}
+        onOpenChange={setSignInOpen}
+        password={signInPassword}
+        onPasswordChange={setSignInPassword}
+        error={signInError}
+        signingIn={signingIn}
+        onSubmit={handleSignIn}
+      />
     </div>
   );
 }

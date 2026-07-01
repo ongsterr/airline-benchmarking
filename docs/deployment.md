@@ -76,8 +76,10 @@ Preview deployments (`*.vercel.app`) are allowed via `CORS_ORIGIN_REGEX`.
 | `DB_SCHEMA` | Railway | No | Default `benchmarking` |
 | `CORS_ORIGINS` | Railway | Yes (prod) | Comma-separated allowed origins |
 | `CORS_ORIGIN_REGEX` | Railway | Recommended | Regex for Vercel preview URLs |
-| `EDIT_PASSWORD` | Railway | Yes (prod) | Shared password for compare editing |
+| `EDIT_PASSWORD` | Railway | Yes (prod) | Shared password for compare editing and pipeline triggers |
 | `SESSION_SECRET` | Railway | Yes (prod) | HMAC key for edit session tokens |
+| `GOOGLE_API_KEY` | Railway | For flight triggers | Gemini API key for flight features research when triggered via API |
+| `LLM_MODEL` | Railway | No | Gemini model for flight research (default `gemini-2.5-pro`) |
 | `NEXT_PUBLIC_API_URL` | Vercel | Yes | Railway API base URL |
 
 Full list: [`.env.example`](../.env.example).
@@ -93,6 +95,7 @@ Full list: [`.env.example`](../.env.example).
 | CORS errors in browser | Origin not allowed | Set `CORS_ORIGINS` to prod URL; set `CORS_ORIGIN_REGEX` for previews |
 | API calls to localhost | `NEXT_PUBLIC_API_URL` not set on Vercel | Set env var and **redeploy** frontend |
 | Vercel build-time fetch errors | Railway not live during first build | Deploy Railway first, then Vercel |
+| Flight pipeline trigger returns empty | `GOOGLE_API_KEY` not set on Railway | Add `GOOGLE_API_KEY` to Railway and redeploy backend |
 
 ## Config files
 
@@ -106,6 +109,6 @@ Full list: [`.env.example`](../.env.example).
 ## Out of scope (Phase 1)
 
 - Dockerfile (Nixpacks is used instead)
-- Scheduled pipeline runs on Railway
+- Scheduled/cron pipeline runs on Railway (manual API triggers when signed in are supported)
 - CI/CD GitHub Actions
 - Custom domains (handled by Vercel / Railway dashboards)

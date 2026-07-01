@@ -354,3 +354,85 @@ export async function downloadFleetCsv(ids: string[]): Promise<void> {
   anchor.remove();
   window.URL.revokeObjectURL(url);
 }
+
+export type PipelineType = "hardware" | "flight";
+export type PipelineRunStatus = "running" | "completed" | "failed";
+
+export type PipelineRun = {
+  id: string;
+  pipeline_type: PipelineType;
+  status: PipelineRunStatus;
+  started_at: string;
+  finished_at: string | null;
+  airlines: string[];
+  configs_discovered: number;
+  configs_updated: number;
+  configs_skipped: number;
+  errors: string[] | null;
+};
+
+export type PipelineTriggerOptions = {
+  airlines: string[];
+  force?: boolean;
+  skipExisting?: boolean;
+};
+
+async function pipelineFetchApi<T>(
+  path: string,
+  init?: RequestInit
+): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    ...init,
+    headers: {
+      ...authHeaders(),
+      ...(init?.headers ?? {}),
+    },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`API error ${res.status}: ${body || "request failed"}`);
+  }
+  if (res.status === 204) {
+    return undefined as T;
+  }
+  return res.json() as Promise<T>;
+}
+
+function pipelineTriggerBody(options: PipelineTriggerOptions) {
+  return {
+    airlines: options.airlines,
+    force: options.force ?? false,
+    skip_existing: options.skipExisting ?? false,
+  };
+}
+
+export async function triggerHardwarePipeline(
+  options: PipelineTriggerOptions
+): Promise<PipelineRun> {
+  return pipelineFetchApi<PipelineRun>("/api/v1/pipeline/hardware", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(pipelineTriggerBody(options)),
+  });
+}
+
+export async function triggerFlightPipeline(
+  options: PipelineTriggerOptions
+): Promise<PipelineRun> {
+  return pipelineFetchApi<PipelineRun>("/api/v1/pipeline/flight", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(pipelineTriggerBody(options)),
+  });
+}
+
+export async function getPipelineRun(runId: string): Promise<PipelineRun> {
+  return pipelineFetchApi<PipelineRun>(
+    `/api/v1/pipeline/runs/${encodeURIComponent(runId)}`
+  );
+}
+
+export async function getActivePipelineRun(): Promise<PipelineRun | null> {
+  return pipelineFetchApi<PipelineRun | null>("/api/v1/pipeline/runs/active");
+}
