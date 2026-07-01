@@ -29,6 +29,9 @@ export const COMPARE_AIRLINE_COLUMN_CLASS =
 export const COMPARE_FEATURE_COLUMN_CLASS =
 	'w-40 min-w-32 align-top text-left overflow-hidden !whitespace-normal break-words [overflow-wrap:anywhere]'
 
+export const COMPARE_TABLE_HEAD_STICKY_CLASS =
+	'sticky top-0 z-10 !overflow-visible bg-card shadow-[inset_0_-1px_0_hsl(var(--border))]'
+
 export const CABINS = [
 	{ key: 'first', label: 'First' },
 	{ key: 'business', label: 'Business' },

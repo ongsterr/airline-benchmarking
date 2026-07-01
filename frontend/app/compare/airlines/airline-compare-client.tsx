@@ -25,6 +25,7 @@ import {
   CABINS,
   COMPARE_AIRLINE_COLUMN_CLASS,
   COMPARE_FEATURE_COLUMN_CLASS,
+  COMPARE_TABLE_HEAD_STICKY_CLASS,
   TABLE_HEAD_CLASS,
   TABLE_LINK_CLASS,
   TABLE_ROW_CLASS,
@@ -484,11 +485,11 @@ export default function AirlineComparePageClient() {
 
       {compareError && <EmptyState message={compareError} />}
 
-      <SectionCard title="Features">
-        <Table className="table-fixed">
+      <SectionCard title="Features" overflowVisible>
+        <Table className="table-fixed" containerClassName="overflow-visible">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className={cn(TABLE_HEAD_CLASS, COMPARE_FEATURE_COLUMN_CLASS)}>
+              <TableHead className={cn(TABLE_HEAD_CLASS, COMPARE_FEATURE_COLUMN_CLASS, COMPARE_TABLE_HEAD_STICKY_CLASS)}>
                 Feature
               </TableHead>
               {selectedSlugs.map((slug) => {
@@ -500,6 +501,7 @@ export default function AirlineComparePageClient() {
                     className={cn(
                       TABLE_HEAD_CLASS,
                       COMPARE_AIRLINE_COLUMN_CLASS,
+                      COMPARE_TABLE_HEAD_STICKY_CLASS,
                       isEditing && "bg-primary/5 ring-1 ring-inset ring-primary/20"
                     )}
                   >

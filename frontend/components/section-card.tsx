@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 import {
   Card,
   CardAction,
@@ -11,11 +12,17 @@ type SectionCardProps = {
   title?: string;
   toolbar?: ReactNode;
   children: ReactNode;
+  overflowVisible?: boolean;
 };
 
-export function SectionCard({ title, toolbar, children }: SectionCardProps) {
+export function SectionCard({
+  title,
+  toolbar,
+  children,
+  overflowVisible,
+}: SectionCardProps) {
   return (
-    <Card>
+    <Card className={cn(overflowVisible && "overflow-visible")}>
       {(title || toolbar) && (
         <CardHeader className="flex flex-row items-center justify-between border-b px-4 py-3">
           {title ? (
