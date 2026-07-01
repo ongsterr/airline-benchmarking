@@ -19,6 +19,8 @@ from shared.schemas import AirlineFlightFeatures, CabinFlightFeatures
 
 load_dotenv()
 
+TEST_SLUG_A = "tst-pat-a"
+TEST_SLUG_B = "tst-pat-b"
 TEST_PASSWORD = "test-edit-password"
 TEST_SESSION_SECRET = "test-session-secret-key-for-hmac"
 
@@ -65,18 +67,18 @@ def seeded_flight_data(client: TestClient):
     )
     upsert_flight_features(
         db,
-        "ek",
-        "Emirates",
-        "EK",
+        TEST_SLUG_A,
+        "Patch Test A",
+        "P1",
         AirlineFlightFeatures(cabins={"business": cabin}),
-        "https://example.com/ek",
+        f"https://example.com/{TEST_SLUG_A}",
         datetime.now(timezone.utc),
     )
     upsert_flight_features(
         db,
-        "ba",
-        "British Airways",
-        "BA",
+        TEST_SLUG_B,
+        "Patch Test B",
+        "P2",
         AirlineFlightFeatures(
             cabins={
                 "business": CabinFlightFeatures(
@@ -86,7 +88,7 @@ def seeded_flight_data(client: TestClient):
                 )
             }
         ),
-        "https://example.com/ba",
+        f"https://example.com/{TEST_SLUG_B}",
         datetime.now(timezone.utc),
     )
     db.commit()
@@ -97,6 +99,7 @@ def seeded_flight_data(client: TestClient):
 def test_coerce_flight_field_value() -> None:
     assert coerce_flight_field_value("checked_bag_pieces", "3") == 3
     assert coerce_flight_field_value("check_in_priority", "") is None
+    assert coerce_flight_field_value("checked_bag_kg_total", "—") is None
     assert coerce_flight_field_value("amenity_kit", "socks, eye mask") == [
         "socks",
         "eye mask",
@@ -113,7 +116,7 @@ def test_patch_requires_auth_when_enabled(
     auth_enabled, client: TestClient, seeded_flight_data
 ) -> None:
     response = client.patch(
-        "/api/v1/airlines/ek/flight-features?cabin=business",
+        f"/api/v1/airlines/{TEST_SLUG_A}/flight-features?cabin=business",
         json={"fields": {"check_in_priority": "No"}},
     )
     assert response.status_code == 401
@@ -123,32 +126,37 @@ def test_patch_check_in_priority(
     client: TestClient, seeded_flight_data
 ) -> None:
     response = client.patch(
-        "/api/v1/airlines/ek/flight-features?cabin=business",
+        f"/api/v1/airlines/{TEST_SLUG_A}/flight-features?cabin=business",
         json={"fields": {"check_in_priority": "No"}},
     )
     assert response.status_code == 200
     assert response.json()["check_in_priority"] == "No"
 
-    compare = client.get("/api/v1/compare/airlines?slugs=ek,ba&cabin=business")
+    compare = client.get(
+        f"/api/v1/compare/airlines?slugs={TEST_SLUG_A},{TEST_SLUG_B}&cabin=business"
+    )
     assert compare.status_code == 200
     rows = compare.json()["rows"]
     check_in_row = next(r for r in rows if r["field_key"] == "check_in_priority")
-    assert check_in_row["values"]["ek"] == "No"
+    assert check_in_row["values"][TEST_SLUG_A] == "No"
 
 
 def test_patch_source_url(client: TestClient, seeded_flight_data) -> None:
+    updated_url = f"https://example.com/{TEST_SLUG_A}-updated"
     response = client.patch(
-        "/api/v1/airlines/ek/flight-features?cabin=business",
-        json={"source_url": "https://example.com/ek-updated"},
+        f"/api/v1/airlines/{TEST_SLUG_A}/flight-features?cabin=business",
+        json={"source_url": updated_url},
     )
     assert response.status_code == 200
 
-    compare = client.get("/api/v1/compare/airlines?slugs=ek,ba&cabin=business")
+    compare = client.get(
+        f"/api/v1/compare/airlines?slugs={TEST_SLUG_A},{TEST_SLUG_B}&cabin=business"
+    )
     assert compare.status_code == 200
     source_row = next(
         r for r in compare.json()["rows"] if r["field_key"] == "source_url"
     )
-    assert source_row["values"]["ek"] == "https://example.com/ek-updated"
+    assert source_row["values"][TEST_SLUG_A][0]["url"] == updated_url
 
 
 def test_patch_with_token_when_auth_enabled(
@@ -156,7 +164,7 @@ def test_patch_with_token_when_auth_enabled(
 ) -> None:
     token = _login(client)
     response = client.patch(
-        "/api/v1/airlines/ek/flight-features?cabin=business",
+        f"/api/v1/airlines/{TEST_SLUG_A}/flight-features?cabin=business",
         json={"fields": {"lounge_access": "No"}},
         headers=_auth_headers(token),
     )
@@ -168,7 +176,7 @@ def test_patch_rejects_unknown_field(
     client: TestClient, seeded_flight_data
 ) -> None:
     response = client.patch(
-        "/api/v1/airlines/ek/flight-features?cabin=business",
+        f"/api/v1/airlines/{TEST_SLUG_A}/flight-features?cabin=business",
         json={"fields": {"not_a_field": "x"}},
     )
     assert response.status_code == 422
@@ -178,7 +186,7 @@ def test_patch_rejects_empty_body(
     client: TestClient, seeded_flight_data
 ) -> None:
     response = client.patch(
-        "/api/v1/airlines/ek/flight-features?cabin=business",
+        f"/api/v1/airlines/{TEST_SLUG_A}/flight-features?cabin=business",
         json={},
     )
     assert response.status_code == 422

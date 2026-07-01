@@ -53,12 +53,12 @@ import {
   getAirlineSummaries,
   updateAirlineFlightFeatures,
 } from "@/lib/api";
-import { MAX_COMPARE_CONFIGS, MIN_COMPARE_CONFIGS } from "@/lib/constants";
+import { MAX_COMPARE_CONFIGS, MIN_COMPARE_CONFIGS, isDisplayAirlineSlug } from "@/lib/constants";
 
 type DraftValues = Record<string, unknown>;
 
 function parseSlugs(param: string | null): string[] {
-  return param?.split(",").filter(Boolean) ?? [];
+  return (param?.split(",").filter(Boolean) ?? []).filter(isDisplayAirlineSlug);
 }
 
 function isDifferent(fieldKey: string, values: Record<string, unknown>) {
@@ -88,8 +88,9 @@ function buildAirlineUpdatePayload(
     if (row.scope !== "flight" || row.field_key === "source_url") continue;
     const initial = row.values[slug] ?? null;
     const next = draft[row.field_key] ?? null;
-    if (!flightValuesEqual(row.field_key, initial, next)) continue;
-    fields[row.field_key] = next as string | number | string[] | null;
+    if (flightValuesEqual(row.field_key, initial, next)) continue;
+    fields[row.field_key] =
+      next === "—" ? null : (next as string | number | string[] | null);
   }
 
   return { fields };

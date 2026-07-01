@@ -30,7 +30,7 @@ coverage.xml
 
 # --- Pipeline artifacts ---
 data/raw/
-data/parsed/*.json
+data/parsed/
 data/processed/
 data/cache/
 

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.models.entities import AircraftConfiguration, Airline
 from backend.app.routers.aircraft_grouping import _pick_primary, config_group_id
+from shared.constants import is_display_airline_slug
 from shared.schemas import AirlineSummary
 
 
@@ -46,6 +47,8 @@ def get_airline_summaries(db: Session) -> list[AirlineSummary]:
     summaries: list[AirlineSummary] = []
     airlines = db.query(Airline).order_by(Airline.name).all()
     for airline in airlines:
+        if not is_display_airline_slug(airline.slug):
+            continue
         configs = (
             db.query(AircraftConfiguration)
             .filter(AircraftConfiguration.airline_id == airline.id)

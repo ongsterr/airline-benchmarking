@@ -55,7 +55,7 @@ def coerce_flight_field_value(field_key: str, value: Any) -> Any:
 
     field_type = FIELD_TYPES[field_key]
 
-    if value is None or value == "":
+    if value is None or value == "" or value == "—":
         return None
 
     if field_type == "string":

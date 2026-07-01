@@ -1,3 +1,5 @@
+import { isDisplayAirlineSlug } from "@/lib/constants";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export const EDIT_AUTH_TOKEN_KEY = "edit_auth_token";
@@ -174,7 +176,8 @@ async function fetchApi<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export async function getAirlineSummaries(): Promise<AirlineSummary[]> {
-  return fetchApi("/api/v1/airlines/summary");
+  const summaries: AirlineSummary[] = await fetchApi("/api/v1/airlines/summary");
+  return summaries.filter((summary) => isDisplayAirlineSlug(summary.slug));
 }
 
 export async function getAircraftFilterOptions(): Promise<AircraftFilterOptions> {

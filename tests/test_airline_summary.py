@@ -6,6 +6,7 @@ from datetime import date
 from types import SimpleNamespace
 
 from backend.app.routers.airlines import _count_config_groups
+from shared.constants import is_display_airline_slug
 
 
 def _config(
@@ -89,3 +90,11 @@ def test_count_config_groups_unknown_haul_and_manufacturer() -> None:
     assert airbus == 0
     assert boeing == 0
     assert other == 1
+
+
+def test_is_display_airline_slug_excludes_test_fixtures() -> None:
+    assert is_display_airline_slug("ek") is True
+    assert is_display_airline_slug("ba") is True
+    assert is_display_airline_slug("test-cmp-a") is False
+    assert is_display_airline_slug("tst-pat-a") is False
+    assert is_display_airline_slug("tuups1") is False
