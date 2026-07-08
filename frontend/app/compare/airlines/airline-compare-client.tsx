@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
+import { ChevronDown, ChevronRight, Download, ExternalLink } from "lucide-react";
 import { Fragment, useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AirlineBadge } from "@/components/airline-badge";
@@ -47,6 +47,8 @@ import {
   updateAirlineFlightFeatures,
 } from "@/lib/api";
 import { MAX_COMPARE_CONFIGS, MIN_COMPARE_CONFIGS, isDisplayAirlineSlug } from "@/lib/constants";
+import { buildAirlineCompareCsv } from "@/lib/airline-compare-csv";
+import { downloadCsv } from "@/lib/csv";
 
 type DraftValues = Record<string, unknown>;
 
@@ -244,6 +246,7 @@ export default function AirlineComparePageClient() {
   const [signInPassword, setSignInPassword] = useState("");
   const [signInError, setSignInError] = useState<string | null>(null);
   const [signingIn, setSigningIn] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const loadCompare = useCallback(() => {
     if (selectedSlugs.length < MIN_COMPARE_CONFIGS) {
@@ -386,6 +389,33 @@ export default function AirlineComparePageClient() {
     await logout();
   };
 
+  const handleDownloadCsv = () => {
+    if (loading || rows.length === 0 || exporting) return;
+    setExporting(true);
+    try {
+      const columnLabels = Object.fromEntries(
+        selectedSlugs.map((slug) => [
+          slug,
+          summaries.find((s) => s.slug === slug)?.name ?? slug.toUpperCase(),
+        ])
+      );
+      const content = buildAirlineCompareCsv(
+        rows,
+        selectedSlugs,
+        columnLabels,
+        cabin
+      );
+      const filename = `airline-compare-${cabin}-${new Date().toISOString().slice(0, 10)}.csv`;
+      downloadCsv(content, filename);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to download CSV";
+      window.alert(message);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const cabinTabs = (
     <Tabs value={cabin} onValueChange={(v) => v && setCabin(v as CabinKey)}>
       <TabsList variant="line" className="h-8">
@@ -485,7 +515,21 @@ export default function AirlineComparePageClient() {
 
       {compareError && <EmptyState message={compareError} />}
 
-      <SectionCard title="Features" overflowVisible>
+      <SectionCard
+        title="Features"
+        toolbar={
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={loading || rows.length === 0 || exporting}
+            onClick={handleDownloadCsv}
+          >
+            <Download className="mr-1 h-3 w-3" />
+            {exporting ? "Exporting..." : "Download CSV"}
+          </Button>
+        }
+        overflowVisible
+      >
         <Table className="table-fixed" containerClassName="overflow-visible">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
