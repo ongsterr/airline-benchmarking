@@ -42,6 +42,9 @@ class Airline(Base):
     flight_sources: Mapped[list[FlightFeatureSource]] = relationship(
         back_populates="airline", cascade="all, delete-orphan"
     )
+    menu_captures: Mapped[list[MenuCapture]] = relationship(
+        back_populates="airline", cascade="all, delete-orphan"
+    )
 
 
 class AircraftConfiguration(Base):
@@ -206,6 +209,116 @@ class AirlineCabinFlightFeature(Base):
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     airline: Mapped[Airline] = relationship(back_populates="flight_features")
+
+
+class MenuCapture(Base):
+    __tablename__ = "menu_captures"
+    __table_args__ = (
+        UniqueConstraint(
+            "flight_number",
+            "origin_iata",
+            "dest_iata",
+            "service_date",
+            "cabin_code",
+            name="uq_menu_capture_flight_cabin",
+        ),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    source_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    airline_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(f"{SCHEMA}.airlines.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    source_url: Mapped[str] = mapped_column(String(500), nullable=False)
+    cabin_code: Mapped[str] = mapped_column(String(5), nullable=False)
+    flight_number: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    origin_iata: Mapped[str] = mapped_column(String(3), nullable=False)
+    dest_iata: Mapped[str] = mapped_column(String(3), nullable=False)
+    service_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    snapshot_path: Mapped[str | None] = mapped_column(String(500))
+    media_type: Mapped[str] = mapped_column(String(50), default="text/html")
+    raw_bytes_size: Mapped[int | None] = mapped_column(Integer)
+    http_status: Mapped[int | None] = mapped_column(Integer)
+    default_tier: Mapped[int] = mapped_column(Integer, default=1)
+
+    airline: Mapped[Airline] = relationship(back_populates="menu_captures")
+    observation: Mapped[MenuObservation | None] = relationship(
+        back_populates="capture", cascade="all, delete-orphan", uselist=False
+    )
+
+
+class MenuObservation(Base):
+    __tablename__ = "menu_observations"
+    __table_args__ = (
+        UniqueConstraint("capture_id", name="uq_menu_observation_capture"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    capture_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(f"{SCHEMA}.menu_captures.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    airline_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(f"{SCHEMA}.airlines.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    cabin_norm: Mapped[str] = mapped_column(String(30), nullable=False)
+    cabin_marketing: Mapped[str | None] = mapped_column(String(50))
+    origin_iata: Mapped[str | None] = mapped_column(String(3))
+    dest_iata: Mapped[str | None] = mapped_column(String(3))
+    direction: Mapped[str | None] = mapped_column(String(20))
+    menu_cycle: Mapped[str | None] = mapped_column(String(20))
+    service_date: Mapped[date | None] = mapped_column(Date)
+    grain_observed: Mapped[list | None] = mapped_column(JSONB)
+    confidence_tier: Mapped[int] = mapped_column(Integer, default=1)
+    extractor_version: Mapped[str | None] = mapped_column(String(100))
+    extracted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    capture: Mapped[MenuCapture] = relationship(back_populates="observation")
+    items: Mapped[list[MenuItem]] = relationship(
+        back_populates="observation", cascade="all, delete-orphan"
+    )
+
+
+class MenuItem(Base):
+    __tablename__ = "menu_items"
+    __table_args__ = (
+        UniqueConstraint("observation_id", "item_hash", name="uq_menu_item_hash"),
+        {"schema": SCHEMA},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    observation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey(f"{SCHEMA}.menu_observations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    category: Mapped[str] = mapped_column(String(100), nullable=False, default="")
+    subcategory: Mapped[str] = mapped_column(String(100), nullable=False, default="")
+    code: Mapped[str] = mapped_column(String(40), nullable=False, default="")
+    title: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    desc: Mapped[str | None] = mapped_column(Text)
+    position: Mapped[int] = mapped_column(Integer, default=1)
+    item_hash: Mapped[str] = mapped_column(String(100), nullable=False)
+    # Enrichment
+    item_type: Mapped[str | None] = mapped_column(String(20))
+    beverage_type: Mapped[str | None] = mapped_column(String(20))
+    is_vegetarian: Mapped[bool | None] = mapped_column(Boolean)
+    is_vegan: Mapped[bool | None] = mapped_column(Boolean)
+    is_localized: Mapped[bool | None] = mapped_column(Boolean)
+    localization_confidence: Mapped[float | None] = mapped_column(Float)
+    localization_note: Mapped[str | None] = mapped_column(Text)
+    enrichment_version: Mapped[str | None] = mapped_column(String(100))
+    enriched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    observation: Mapped[MenuObservation] = relationship(back_populates="items")
 
 
 class PipelineRun(Base):

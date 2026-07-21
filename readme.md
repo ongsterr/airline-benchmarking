@@ -68,6 +68,11 @@ poetry run python scripts/seed_flight_example.py   # optional: EK example from o
 poetry run python -m pipeline.run_flight --airlines ek,ba,ai
 poetry run python -m pipeline.run_flight --airlines ek --force   # re-run LLM research
 
+# Phase 3: Emirates onboard F&B menu (API → clean/flatten → optional blank-title LLM → DB → enrich)
+poetry run python -m pipeline.run_menu --date 2026-08-01 --flight 7 --origin DXB --destination LHR
+poetry run python -m pipeline.run_menu --date 2026-08-01 --flight 7 --origin DXB --destination LHR --cabins business,economy
+poetry run python -m pipeline.run_menu --date 2026-08-01 --flight 7 --origin DXB --destination LHR --force
+
 # Backend API
 poetry run uvicorn backend.app.main:app --reload --port 8000
 

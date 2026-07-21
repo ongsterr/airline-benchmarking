@@ -4,13 +4,15 @@
 
 Monolithic repo with three layers:
 
-1. **Pipeline** (`pipeline/`) — discovers and extracts aircraft hardware features from [AeroLOPA](https://www.aerolopa.com/) (core airlines `ek`, `ba`, `ai`; any AeroLOPA slug via CLI or UI) via embedded JSON + LLM normalization
+1. **Pipeline** (`pipeline/`) — discovers and extracts aircraft hardware features from [AeroLOPA](https://www.aerolopa.com/) (core airlines `ek`, `ba`, `ai`; any AeroLOPA slug via CLI or UI) via embedded JSON + LLM normalization; cabin flight features via grounded LLM research; Emirates F&B onboard menus via digital-menu API → deterministic clean/flatten → optional blank-title Gemini expansion → DB load → bulk Gemini enrichment of unenriched items
 2. **Backend** (`backend/`) — FastAPI REST API serving aggregated data from Postgres
 3. **Frontend** (`frontend/`) — Next.js + shadcn/ui comparison dashboard
 
 **In scope (Phase 1):** Aircraft hardware features (pipeline + DB + API + fleet/compare UI).
 
 **In scope (Phase 2):** Cabin-class *flight* features (baggage, lounge, amenities) at airline × cabin level — LLM research pipeline, DB tables, API extensions, aircraft detail flight panel, **Airline Cabin Comparison** UI with column editing, and **web-triggered pipeline runs** from View 1 (Extract Airline).
+
+**In scope (Phase 3 — pipeline only):** Emirates F&B onboard menu extraction (`date` × `flight` × `origin` × `destination` × cabin) — digital-menu API fetch, deterministic HTML cleaning + flatten of category/subcategory/code/title/desc, optional Gemini expansion for blank-title descriptions, reconcile/load to menu tables, then bulk Gemini enrichment (food/beverage, dietary, non-DXB localization) for rows with `enriched_at IS NULL`. Menu API + frontend deferred.
 
 See [Key design decisions](#key-design-decisions) for rationale behind major choices. Update that section and the [Change log](#change-log) when scope, stack, or architecture changes.
 
@@ -39,10 +41,17 @@ flight-benchmarking/
 │   ├── artifacts.py             # save data/parsed JSON artifacts
 │   ├── flight_research.py       # Gemini + Google Search grounding for flight benefits
 │   ├── flight_load.py           # upsert flight_feature_sources + airline_cabin_flight_features
+│   ├── menu_config.py           # Emirates onboard-menu URL template + cabin codes + MENU_LLM_MODEL
+│   ├── menu_fetch.py            # POST digital-menu API + JSON evidence snapshots
+│   ├── menu_extract.py          # deterministic clean/flatten + optional blank-title expansion
+│   ├── menu_load.py             # reconcile upsert menu_captures / observations / items (preserve enrichment)
+│   ├── menu_enrich.py           # bulk Gemini enrichment for unenriched menu_items
+│   ├── menu_artifacts.py        # save data/parsed/menu artifacts
 │   ├── load.py                  # upsert aircraft; get_or_create_airline (name preservation)
 │   ├── prompts/                 # EPD-style LLM prompts + typed output schema
 │   ├── run.py                   # aircraft CLI + execute_hardware_pipeline (API-shared)
 │   ├── run_flight.py            # flight CLI + execute_flight_pipeline (API-shared)
+│   ├── run_menu.py              # Emirates menu CLI + execute_menu_pipeline
 │   └── run_progress.py          # flush_run_progress — mid-run DB commits for UI polling
 ├── frontend/                    # Next.js 14+ App Router + shadcn/ui
 │   ├── app/
@@ -79,7 +88,8 @@ flight-benchmarking/
 ├── scripts/                     # reset_schema, deck migration, verification helpers
 ├── docs/
 │   ├── architecture.md
-│   └── deployment.md
+│   ├── deployment.md
+│   └── food_beverage_menu.md  # F&B menu extraction schema + airline source notes
 ├── shared/
 │   ├── schemas.py               # Pydantic models (pipeline + backend contract)
 │   ├── compare_fields.py        # aircraft compare/edit field metadata + coercion
@@ -106,11 +116,20 @@ flowchart LR
     subgraph pipelineF [Flight pipeline]
         R[LLM research] --> LF[flight_load]
     end
+    subgraph pipelineM [Menu pipeline Emirates]
+        MF[POST digital-menu API] --> MC[deterministic clean + flatten]
+        MC --> MB[optional blank-title Gemini expand]
+        MB --> ML[menu_load reconcile]
+        ML --> ME[bulk enrich unenriched items]
+    end
     subgraph storage [Neon Postgres benchmarking schema]
         T1[airlines]
         T2[aircraft_configurations]
         T3[cabin_configurations]
         T4[airline_cabin_flight_features]
+        T5[menu_captures]
+        T6[menu_observations]
+        T7[menu_items]
     end
     subgraph serve [FastAPI]
         API[routers]
@@ -127,6 +146,7 @@ flowchart LR
     end
     L --> T1 & T2 & T3
     LF --> T1 & T4
+    ML --> T1 & T5 & T6 & T7
     T1 & T2 & T3 & T4 --> API
     API --> V1 & V2 & V3 & V4
     PH --> pipelineA
@@ -261,7 +281,43 @@ python -m pipeline.run_flight --airlines ek --skip-existing # skip airlines alre
 
 Requires `GOOGLE_API_KEY` and `LLM_MODEL` (default `gemini-2.5-pro`). Google Search grounding is billed per prompt on Gemini 2.5. Set `GOOGLE_API_KEY` on Railway when using the flight pipeline trigger from the UI.
 
+### Menu pipeline — Emirates F&B (`pipeline/run_menu.py`)
+
+Core orchestration lives in `execute_menu_pipeline(db, run_record, service_date=..., flight=..., origin=..., destination=..., cabins=..., force=..., skip_existing=...)` — CLI now; API trigger deferred to a later phase.
+
+**Live progress:** sets `configs_discovered = len(cabins)` at start, then flushes after each cabin (update, skip, or error) via `flush_run_progress()`. Progress units are **cabins**.
+
+| Stage | Module | Description |
+|-------|--------|-------------|
+| Fetch | `pipeline/menu_fetch.py` | `POST /service/exp/digital-menu?lang=en` with flight/origin/date/cabin; save JSON evidence under `data/raw/menu/` + `evidence/emirates/` |
+| Clean + flatten | `pipeline/menu_extract.py` | Strip HTML/entities/control chars from text; mirror API labels into `category`, `subcategory`, `code`, `title`, `desc` |
+| Blank-title expand | `pipeline/menu_extract.py` + `menu_blank_title_prompt.py` | One Gemini call per cabin only when blank-title + desc items exist; split into `BASE_1`… rows; preserve originals on failure |
+| Load | `pipeline/menu_load.py` | Reconcile upsert `menu_captures` → `menu_observations` → `menu_items` by `item_hash`; preserve enrichment when base fields unchanged |
+| Enrich | `pipeline/menu_enrich.py` + `menu_enrichment_prompt.py` | Query `enriched_at IS NULL`; batch 50; Gemini food/beverage + dietary + non-DXB localization; apply valid partial results; `.enrichment.json` audit |
+
+**Grain:** airline × cabin × route × direction × date. One cabin API response = one capture + one observation + many items. Direction is `outbound` when origin is `DXB`, else `inbound`. Unavailable cabins (empty categories) are skipped, not errored.
+
+**Item fields (API mirror):** `category` ← `categories[].title`; `subcategory` ← `subCategories[].title`; `code` / `title` / `desc` ← cleaned `items[]` fields. Expanded blank titles use `code=BASE_N` and `item_hash=m:BASE_N`.
+
+**Enrichment fields:** `item_type` (`food`\|`beverage`); beverages set `beverage_type`; foods set `is_vegetarian` / `is_vegan` / `is_localized` / `localization_confidence` / `localization_note`; plus `enrichment_version` / `enriched_at`. Flow: `extract/load → query unenriched → bulk Gemini → validated DB update`.
+
+**Source / versioning:** extract `api` / `api+llm` / `api_llm_fallback` as before (`menu_api_transform_v2` + optional blank-title prompt/model). Enrichment writes `menu_enrichment_v1` independently and does not fail the cabin extract on LLM errors.
+
+**Note:** The onboard-menu HTML page is JS-rendered; dish content is **not** in the initial HTML. The pipeline calls the public digital-menu API directly (no Playwright / no login).
+
+Schema reference: [docs/food_beverage_menu.md](./food_beverage_menu.md).
+
+```bash
+python -m pipeline.run_menu --date 2026-08-01 --flight 7 --origin DXB --destination LHR
+python -m pipeline.run_menu --date 2026-08-01 --flight 7 --origin DXB --destination LHR --cabins business,economy
+python -m pipeline.run_menu --date 2026-08-01 --flight 7 --origin DXB --destination LHR --force
+python -m pipeline.run_menu --date 2026-08-01 --flight 7 --origin DXB --destination LHR --skip-existing
+```
+
+Requires `DATABASE_URL`. Blank-title expansion and enrichment use `GOOGLE_API_KEY` + `MENU_LLM_MODEL` (default `gemini-3.5-flash`); without a key, blank-title rows are kept as-is and enrichment leaves rows unenriched for a later retry. Hardware/flight pipelines still use `LLM_MODEL`.
+
 ### Web-triggered pipelines (`backend/app/routers/pipeline.py`)
+
 
 Signed-in users (same `require_edit_auth` as compare PATCH) can start pipelines from the **Extract Airline** section on View 1. Runs execute in a daemon background thread; the client polls `GET /api/v1/pipeline/runs/{run_id}` (or `/active` on page load) every 2.5s via `usePipelineRun`.
 
@@ -296,6 +352,9 @@ Schema: `benchmarking` in Neon Postgres (database name from your Neon project, e
 | `pipeline_runs` | Audit trail + live run progress | `id` UUID PK, `pipeline_type` (`hardware` \| `flight`), `started_at`, `finished_at`, `airlines` JSONB, `configs_discovered`, `configs_updated`, `configs_skipped`, `errors` JSONB — counters updated incrementally during API-triggered runs |
 | `flight_feature_sources` | Curated/discovered airline product page URLs | `airline_id` FK, `url`, `source_type`, `page_type`, `cabin_keys` JSONB, `title`, `http_status`, `fetched_at` |
 | `airline_cabin_flight_features` | Airline × cabin flight benefits | `airline_id` + `cabin_key` unique, typed baggage/priority/lounge/amenity cols, `source_url` (primary research reference), `extra_features` JSONB |
+| `menu_captures` | Emirates digital-menu API fetch audit | unique on (`flight_number`,`origin_iata`,`dest_iata`,`service_date`,`cabin_code`); `source_url`, `snapshot_path`, `media_type` (`application/json`), `http_status`, `raw_bytes_size`, `default_tier` |
+| `menu_observations` | One observation per capture (cabin × route × date) | `capture_id` unique FK, `cabin_norm`, `direction`, `menu_cycle`, `grain_observed` JSONB, `extractor_version`, `extracted_at` |
+| `menu_items` | Dish/drink rows under an observation | unique on (`observation_id`,`item_hash`); `category`, `subcategory`, `code`, `title`, `desc`, `position`; enrichment: `item_type`, `beverage_type`, `is_vegetarian`, `is_vegan`, `is_localized`, `localization_confidence`, `localization_note`, `enrichment_version`, `enriched_at` |
 
 - All primary keys and foreign keys use UUID (`uuid4` on insert)
 - `source_url` on `aircraft_configurations` stores the AeroLOPA page URL (`https://www.aerolopa.com/{svg_id}`), set at aircraft pipeline load
@@ -512,8 +571,9 @@ Secrets documented in [`.env.example`](../.env.example): `DATABASE_URL`, `DB_SCH
 |----------|---------|---------|
 | `DATABASE_URL` | Pipeline, backend | Neon pooled Postgres connection (auto-normalized to `postgresql+psycopg`) |
 | `DB_SCHEMA` | Backend | Postgres schema name (default `benchmarking`) |
-| `GOOGLE_API_KEY` | Pipeline, Railway backend | Gemini API key for LLM normalization and flight research; required on Railway for **Extract flight** UI triggers |
-| `LLM_MODEL` | Pipeline | Gemini model id (default `gemini-2.5-pro`) |
+| `GOOGLE_API_KEY` | Pipeline, Railway backend | Gemini API key for hardware LLM normalize, flight research, menu blank-title expansion, and menu item enrichment; required on Railway for **Extract flight** UI triggers |
+| `LLM_MODEL` | Pipeline | Gemini model id for hardware/flight pipelines (default `gemini-2.5-pro`) |
+| `MENU_LLM_MODEL` | Menu pipeline | Gemini model for blank-title expansion and bulk item enrichment (default `gemini-3.5-flash`) |
 | `CORS_ORIGINS` | Backend | Comma-separated allowed frontend origins |
 | `CORS_ORIGIN_REGEX` | Backend | Regex for Vercel preview domains (e.g. `https://.*\.vercel\.app`) |
 | `EDIT_PASSWORD` | Backend | Shared password for compare edit and pipeline triggers; when empty, PATCH and pipeline POST are open (local dev) |
@@ -531,6 +591,7 @@ See [`.env.example`](../.env.example).
 | DB schema + Alembic migrations (incl. dual-deck + flight features) | Done |
 | Aircraft pipeline discover + fetch + parse + normalize + load | Done |
 | Flight pipeline research + load (`run_flight.py`) | Done |
+| Emirates menu pipeline API fetch + deterministic clean/flatten + optional blank-title expand + load + bulk enrichment (`run_menu.py`) | Done (CLI; API/UI deferred) |
 | FastAPI backend (summary, fleet, compare, airline compare, export, auth, pipeline triggers) | Done |
 | Web UI pipeline triggers (Extract Airline on View 1) | Done |
 | Multi-slug Extract Airline input + live progress panel | Done |
@@ -556,6 +617,8 @@ See [`.env.example`](../.env.example).
 - **Air India slug** — verify AeroLOPA uses `ai` during discovery; adjust config if different
 - **Production edit auth** — set `EDIT_PASSWORD` and `SESSION_SECRET` on Railway before enabling compare edits and pipeline triggers in production
 - **Flight pipeline on Railway** — set `GOOGLE_API_KEY` for Extract flight / `run_flight` triggers
+- **Menu pipeline Phase 3b** — API trigger (`POST /api/v1/pipeline/menu`), read endpoints, and frontend for Emirates F&B menus (pipeline CLI is done)
+- **Emirates cabin URL codes** — confirm premium_economy=`w` (and first=`f`) against live onboard-menu responses if PE menus look empty
 
 ## Key design decisions
 
@@ -589,6 +652,11 @@ Track significant architectural choices here. When a decision is reversed, mark 
 | KD-027 | **Authenticated pipeline triggers from UI** — `POST /api/v1/pipeline/*`, background thread + `pipeline_runs` poll; **Extract Airline** slug toolbar on View 1 (`skip_existing` false = extract, true = update); compare pages edit-only (no pipeline buttons) | Operators can add new AeroLOPA airlines without CLI; incremental update via same slug input; reuses edit auth | Checkbox bulk select; pipeline triggers on compare pages; job queue (Celery) | 2026-07-01 — partial **Superseded** by KD-028 (2026-07-01) |
 | KD-028 | **Multi-slug Extract Airline + live progress** — comma-separated slug input (`airline-slugs.ts`); shared `PipelineProgressPanel`; incremental `flush_run_progress` commits in `execute_*_pipeline` so poll responses update mid-run; hardware progress in configs, flight progress in airlines | Batch onboarding of multiple AeroLOPA airlines in one operator action; visible extraction progress without CLI log tailing | Per-slug sequential UI requests; progress panel only on completion | 2026-07-01 |
 | KD-029 | **Decoupled Fleet selection limits** — unlimited checkbox selection for CSV export; compare remains 2–8 (`MAX_COMPARE_CONFIGS` on Compare button and compare API only); select-all-visible toggles all loaded rows without compare cap; header checkbox bulk-deselects when any visible row is selected; tri-state `indeterminate` styling on shared `Checkbox` | Large CSV exports without artificial 8-config cap; compare guardrails unchanged; predictable select-all / clear-visible behaviour on paginated tables | Single 8-config cap for both export and compare; state-blind `onCheckedChange(Boolean)` on header checkbox | 2026-07-01 |
+| KD-030 | **Emirates menu pipeline — public digital-menu API → normalized tables** (`menu_captures` / `menu_observations` / `menu_items`); loop all cabins per flight params; CLI-first (`run_menu.py`) | Matches [food_beverage_menu.md](./food_beverage_menu.md) grain; page HTML is JS shell only; `POST /service/exp/digital-menu` returns structured categories/items without auth | Playwright render + LLM-on-HTML; JSONB-only items; API/UI trigger in same PR | 2026-07-21 |
+| KD-031 | **Menu taxonomy + LLM reconcile** — per-item meal `category`; expanded courses; Gemini 3.5 Flash normalize + hash merge | — | — | 2026-07-21 — **Superseded** by KD-032 |
+| KD-032 | **Menu API mirror transform** — deterministic clean/flatten only; store raw API `category` / `subcategory` / `code` / `title` / `desc`; `extractor_version=menu_api_transform_v1`; no menu LLM | API already structured; cleaning is sufficient; removes Gemini latency/cost from menu runs | Canonical taxonomy + LLM classification; keep `course` enum | 2026-07-21 — partial **Superseded** by KD-033 |
+| KD-033 | **Blank-title menu expansion** — one Gemini call per cabin only for empty-title + desc items; split into `BASE_N` rows; inherit category/subcategory; preserve originals on failure (`api` / `api+llm` / `api_llm_fallback`) | Soft-drink style API rows list many products in one desc; targeted LLM avoids full-menu latency | Full-menu LLM; rules-only comma split; keep blank titles forever | 2026-07-21 |
+| KD-034 | **Bulk menu enrichment** — after load, enrich only `enriched_at IS NULL` rows in batches of 50; food/beverage + dietary + non-DXB localization; reconcile load preserves enrichment; partial valid updates + retry | Incremental cost; typed applicability; localization tied to non-DXB endpoint | Enrich on every extract; rules-only labels; delete-and-reinsert items | 2026-07-21 |
 | KD-014 | **Slim API DTOs** — no raw HTML or seat-level data in list/summary endpoints | Keeps fleet and summary views fast; detail endpoint for drill-down | Return full source payload everywhere | 2026-06-29 |
 | KD-015 | **Next.js App Router + shadcn/ui** — compact light theme, TanStack Table | Standardised design system per readme; data-dense tables inspired by Eleken/LCM Hub | MUI, Ant Design, plain Tailwind | 2026-06-29 |
 | KD-016 | **Deploy split:** frontend → Vercel, backend → Railway | Matches readme deployment targets; fits static/SSR frontend + long-running API | Single host; containerise both on Railway | 2026-06-29 |
@@ -599,6 +667,11 @@ Record notable architecture, schema, API, and deployment changes here (newest fi
 
 | Date | Change |
 |------|--------|
+| 2026-07-21 | Bulk menu enrichment: typed food/beverage fields, reconcile load preserves enrichment, batch Gemini on `enriched_at IS NULL`, `.enrichment.json` audit — KD-034 |
+| 2026-07-21 | Blank-title menu expansion: batch Gemini per cabin for empty title + desc; `BASE_N` codes; fallback preserves originals — KD-033 |
+| 2026-07-21 | Menu pipeline simplified: drop Gemini/taxonomy; deterministic API mirror (`category`/`subcategory`/`code`/`title`/`desc`); `menu_api_transform_v1` — KD-032 |
+| 2026-07-21 | Menu cleaning + taxonomy: HTML-fragment cleaner, per-item `category`, courses without `other`, Gemini 3.5 Flash normalize + `item_hash` reconcile (`MENU_LLM_MODEL`), `menu_taxonomy_v1` / `menu_api_prompt_v2` — KD-031 (superseded by KD-032) |
+| 2026-07-21 | Emirates F&B menu pipeline: `run_menu.py` calls public `POST /service/exp/digital-menu` → deterministic map → `menu_captures` / `menu_observations` / `menu_items` (HTML shell has no dishes; Playwright not required) — KD-030 |
 | 2026-07-01 | Fleet selection: unlimited CSV export selection; compare capped at 2–8; select-all-visible bulk deselect fix + tri-state header checkbox (`checkbox.tsx` indeterminate) — KD-029 |
 | 2026-07-01 | **Extract Airline** multi-slug + live progress: comma-separated slug input (`frontend/lib/airline-slugs.ts`), `PipelineProgressPanel`, simplified `PipelineTriggerButton`; `pipeline/run_progress.py` + incremental commits in `execute_hardware_pipeline` / `execute_flight_pipeline`; mid-run poll test (`test_get_pipeline_run_mid_progress`) — KD-028 |
 | 2026-07-01 | Pipeline trigger API (`backend/app/routers/pipeline.py`): `POST /api/v1/pipeline/hardware|flight`, run status endpoints, `pipeline_type` on `pipeline_runs`, `execute_*_pipeline` shared with CLI; **Extract Airline** UI on View 1 (slug input, extract vs update); aircraft compare `table-fixed` column widths; pipeline triggers removed from compare pages — KD-027 |

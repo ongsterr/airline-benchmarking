@@ -28,6 +28,8 @@ def create_engine_kwargs(database_url: str) -> dict:
         # Neon connection limits — keep the pool small; prefer the pooled endpoint in DATABASE_URL.
         kwargs["pool_size"] = 5
         kwargs["max_overflow"] = 0
+        # Fail fast instead of hanging indefinitely on unreachable/cold endpoints.
+        kwargs["connect_args"] = {"connect_timeout": 10}
 
     return kwargs
 

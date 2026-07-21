@@ -239,7 +239,68 @@ class AirlineFlightFeaturesUpdate(BaseModel):
     source_url: str | None = None
 
 
-PipelineType = Literal["hardware", "flight"]
+# --- F&B menu extraction (Emirates onboard menu) ---
+
+MenuDirection = Literal["outbound", "inbound"]
+MenuCabinNorm = Literal["first", "business", "premium_economy", "economy"]
+MenuItemType = Literal["food", "beverage"]
+MenuBeverageType = Literal["alcoholic", "non_alcoholic"]
+
+
+class MenuItem(BaseModel):
+    """Flattened digital-menu API item with cleaned text and optional enrichment."""
+
+    category: str
+    subcategory: str
+    code: str
+    title: str
+    desc: str | None = None
+    position: int = 1
+    item_hash: str
+    # Enrichment (nullable until Gemini enrich pass)
+    item_type: MenuItemType | None = None
+    beverage_type: MenuBeverageType | None = None
+    is_vegetarian: bool | None = None
+    is_vegan: bool | None = None
+    is_localized: bool | None = None
+    localization_confidence: float | None = None
+    localization_note: str | None = None
+    enrichment_version: str | None = None
+    enriched_at: datetime | None = None
+
+
+class MenuObservation(BaseModel):
+    """Full observation including pipeline-attached metadata."""
+
+    observation_id: str | None = None
+    capture_id: str | None = None
+    airline: str = "emirates"
+    cabin_norm: MenuCabinNorm
+    cabin_marketing: str | None = None
+    origin_iata: str | None = None
+    dest_iata: str | None = None
+    direction: MenuDirection | None = None
+    menu_cycle: str | None = None
+    service_date: date | None = None
+    grain_observed: list[str] = Field(default_factory=list)
+    confidence_tier: int = 1
+    extractor_version: str | None = None
+    extracted_at: datetime | None = None
+    items: list[MenuItem] = Field(default_factory=list)
+
+
+class MenuExtraction(BaseModel):
+    """Deterministic API transform: observation-level fields + flattened items."""
+
+    cabin_norm: MenuCabinNorm
+    cabin_marketing: str | None = None
+    menu_cycle: str | None = None
+    grain_observed: list[str] = Field(default_factory=list)
+    confidence_tier: int = 1
+    items: list[MenuItem] = Field(default_factory=list)
+
+
+PipelineType = Literal["hardware", "flight", "menu"]
 PipelineRunStatus = Literal["running", "completed", "failed"]
 
 

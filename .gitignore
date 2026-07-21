@@ -33,6 +33,7 @@ data/raw/
 data/parsed/
 data/processed/
 data/cache/
+evidence/
 
 # --- Node / Next.js (frontend) ---
 node_modules/
