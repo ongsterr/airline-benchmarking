@@ -542,10 +542,9 @@ flowchart LR
 ### View 5 — Menu Items Analysis (`/menu`)
 
 - Compares Emirates onboard menus across **2–8 flight × route × date** observations for one global cabin and item type
-- **Filters** (`SectionCard`, overflow visible): cabin `Select`, item type `Select` (`all` / `food` / `beverage`), `MenuFlightSelector` multi-select (labels show flight, route, date, item count / unavailable)
-- **URL state:** `?cabin=business&item_type=all&ids=<observation_uuid>,…` — changing cabin or item type clears incompatible selections
-- **Summary** matrix: rows grouped by API `category` → `subcategory`; one column per selected flight; each cell stacks alcoholic / non-alcoholic / vegetarian / vegan / localised counts (true enrichment flags only; unenriched noted separately)
-- **Item detail** matrix: same grouping; each cell lists item titles (desc + flag chips) in source `position` order; unavailable menus shown distinctly from empty subcategory zeros
+- **Filters** (`SectionCard`, overflow visible): cabin `Select`, item type `Select` (`all` / `food` / `beverage`), source category `Select` (`all` / distinct API `category` values from the loaded compare payload), `MenuFlightSelector` multi-select (labels show flight, route, date, item count / unavailable)
+- **URL state:** `?cabin=business&item_type=all&category=<source_category>&ids=<observation_uuid>,…` — changing cabin or item type clears incompatible selections and resets category; stale category values reset to all when not present in the payload
+- **Summary** / **Item detail** matrices: API still returns category/subcategory rows; the frontend pivots client-side to enriched food type (`Food` / `Beverage` / `Unenriched`) → `subcategory`, optionally filtered by source category. Matching subcategories merge across source categories when All categories is selected. Each summary cell stacks alcoholic / non-alcoholic / vegetarian / vegan / localised counts (true enrichment flags only; unenriched noted separately). Detail cells list item titles (desc + flag chips) in source `position` order; unavailable menus shown distinctly from empty subcategory zeros
 - Data from `GET /api/v1/menu/filter-options` + `GET /api/v1/menu/compare`; read-only (no edit auth)
 
 **API integration:** `NEXT_PUBLIC_API_URL` env var; server components for summary initial data; client components for fleet filters, both compare views, menu analysis, and edit flows. Use shadcn `Skeleton` for loading states.
@@ -681,7 +680,7 @@ Track significant architectural choices here. When a decision is reversed, mark 
 | KD-032 | **Menu API mirror transform** — deterministic clean/flatten only; store raw API `category` / `subcategory` / `code` / `title` / `desc`; `extractor_version=menu_api_transform_v1`; no menu LLM | API already structured; cleaning is sufficient; removes Gemini latency/cost from menu runs | Canonical taxonomy + LLM classification; keep `course` enum | 2026-07-21 — partial **Superseded** by KD-033 |
 | KD-033 | **Blank-title menu expansion** — one Gemini call per cabin only for empty-title + desc items; split into `BASE_N` rows; inherit category/subcategory; preserve originals on failure (`api` / `api+llm` / `api_llm_fallback`) | Soft-drink style API rows list many products in one desc; targeted LLM avoids full-menu latency | Full-menu LLM; rules-only comma split; keep blank titles forever | 2026-07-21 |
 | KD-034 | **Bulk menu enrichment** — after load, enrich only `enriched_at IS NULL` rows in batches of 50; food/beverage + dietary + non-DXB localization; reconcile load preserves enrichment; partial valid updates + retry | Incremental cost; typed applicability; localization tied to non-DXB endpoint | Enrich on every extract; rules-only labels; delete-and-reinsert items | 2026-07-21 |
-| KD-035 | **Menu Analysis read API + UI** — `GET /api/v1/menu/filter-options` + `/compare`; global cabin + item_type; 2–8 observation columns; summary metric stacks + detail item lists by category/subcategory | Operators compare F&B mix across flights without CSV; reuses compare column limits and enrichment booleans | Per-flight cabin tabs; client-side pivot of raw items; tag arrays | 2026-07-21 |
+| KD-035 | **Menu Analysis read API + UI** — `GET /api/v1/menu/filter-options` + `/compare`; global cabin + item_type; 2–8 observation columns; API rows by category/subcategory; frontend pivots to food type/subcategory with optional source-category filter | Operators compare F&B mix across flights without CSV; reuses compare column limits and enrichment booleans | Per-flight cabin tabs; server-side food-type pivot; tag arrays | 2026-07-21 |
 | KD-014 | **Slim API DTOs** — no raw HTML or seat-level data in list/summary endpoints | Keeps fleet and summary views fast; detail endpoint for drill-down | Return full source payload everywhere | 2026-06-29 |
 | KD-015 | **Next.js App Router + shadcn/ui** — compact light theme, TanStack Table | Standardised design system per readme; data-dense tables inspired by Eleken/LCM Hub | MUI, Ant Design, plain Tailwind | 2026-06-29 |
 | KD-016 | **Deploy split:** frontend → Vercel, backend → Railway | Matches readme deployment targets; fits static/SSR frontend + long-running API | Single host; containerise both on Railway | 2026-06-29 |
@@ -692,6 +691,7 @@ Record notable architecture, schema, API, and deployment changes here (newest fi
 
 | Date | Change |
 |------|--------|
+| 2026-07-22 | Menu Analysis UI: source-category filter + client-side pivot of compare matrices to food type (`Food` / `Beverage` / `Unenriched`) → subcategory — KD-035 |
 | 2026-07-21 | Menu Analysis: `GET /api/v1/menu/filter-options` + `/compare`, View 5 UI (`/menu`), summary/detail matrices, `ensure_menu_columns` on API startup — KD-035 |
 | 2026-07-21 | Bulk menu enrichment: typed food/beverage fields, reconcile load preserves enrichment, batch Gemini on `enriched_at IS NULL`, `.enrichment.json` audit — KD-034 |
 | 2026-07-21 | Blank-title menu expansion: batch Gemini per cabin for empty title + desc; `BASE_N` codes; fallback preserves originals — KD-033 |

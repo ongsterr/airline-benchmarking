@@ -49,8 +49,11 @@ import {
   emptyMetricCounts,
   formatMenuFlightLabel,
   itemFlagLabels,
+  listMenuSourceCategories,
+  MENU_ALL_CATEGORIES,
   MENU_ITEM_TYPE_OPTIONS,
   MENU_SUMMARY_METRICS,
+  pivotMenuCompareRows,
 } from "@/lib/menu-fields";
 import { cn } from "@/lib/utils";
 
@@ -150,6 +153,9 @@ export default function MenuPageClient() {
     const param = searchParams.get("item_type");
     return isItemTypeFilter(param) ? param : "all";
   });
+  const [category, setCategory] = useState<string>(() => {
+    return searchParams.get("category") || MENU_ALL_CATEGORIES;
+  });
   const [selectedIds, setSelectedIds] = useState<string[]>(() =>
     parseIds(searchParams.get("ids")).slice(0, MAX_COMPARE_CONFIGS)
   );
@@ -166,14 +172,21 @@ export default function MenuPageClient() {
     (next: {
       cabin?: CabinKey;
       item_type?: MenuItemTypeFilter;
+      category?: string;
       ids?: string[];
     }) => {
       const params = new URLSearchParams(searchParams.toString());
       const nextCabin = next.cabin ?? cabin;
       const nextType = next.item_type ?? itemType;
+      const nextCategory = next.category ?? category;
       const nextIds = next.ids ?? selectedIds;
       params.set("cabin", nextCabin);
       params.set("item_type", nextType);
+      if (nextCategory && nextCategory !== MENU_ALL_CATEGORIES) {
+        params.set("category", nextCategory);
+      } else {
+        params.delete("category");
+      }
       if (nextIds.length > 0) {
         params.set("ids", nextIds.join(","));
       } else {
@@ -181,7 +194,7 @@ export default function MenuPageClient() {
       }
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     },
-    [cabin, itemType, pathname, router, searchParams, selectedIds]
+    [cabin, category, itemType, pathname, router, searchParams, selectedIds]
   );
 
   useEffect(() => {
@@ -244,6 +257,43 @@ export default function MenuPageClient() {
     };
   }, [selectedIds, cabin, itemType]);
 
+  const sourceCategories = useMemo(
+    () => (compare ? listMenuSourceCategories(compare.detail_rows) : []),
+    [compare]
+  );
+
+  // Clamp stale category when the loaded compare payload no longer includes it.
+  if (
+    compare &&
+    sourceCategories.length > 0 &&
+    category !== MENU_ALL_CATEGORIES &&
+    !sourceCategories.includes(category)
+  ) {
+    setCategory(MENU_ALL_CATEGORIES);
+  }
+
+  const activeCategory =
+    !compare ||
+    category === MENU_ALL_CATEGORIES ||
+    sourceCategories.includes(category)
+      ? category
+      : MENU_ALL_CATEGORIES;
+
+  useEffect(() => {
+    const urlCategory = searchParams.get("category");
+    if (!urlCategory) return;
+    if (!compare || sourceCategories.length === 0) return;
+    if (sourceCategories.includes(urlCategory)) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("category");
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [compare, pathname, router, searchParams, sourceCategories]);
+
+  const pivotedRows = useMemo(
+    () => (compare ? pivotMenuCompareRows(compare, activeCategory) : []),
+    [compare, activeCategory]
+  );
+
   const optionById = useMemo(() => {
     const map = new Map<string, MenuFlightOption>();
     for (const option of options) {
@@ -256,14 +306,22 @@ export default function MenuPageClient() {
     if (!isCabinKey(value)) return;
     setCabin(value);
     setSelectedIds([]);
-    syncUrl({ cabin: value, ids: [] });
+    setCategory(MENU_ALL_CATEGORIES);
+    syncUrl({ cabin: value, ids: [], category: MENU_ALL_CATEGORIES });
   };
 
   const handleItemTypeChange = (value: string | null) => {
     if (!isItemTypeFilter(value)) return;
     setItemType(value);
     setSelectedIds([]);
-    syncUrl({ item_type: value, ids: [] });
+    setCategory(MENU_ALL_CATEGORIES);
+    syncUrl({ item_type: value, ids: [], category: MENU_ALL_CATEGORIES });
+  };
+
+  const handleCategoryChange = (value: string | null) => {
+    const next = value || MENU_ALL_CATEGORIES;
+    setCategory(next);
+    syncUrl({ category: next });
   };
 
   const handleSelectionChange = (ids: string[]) => {
@@ -291,7 +349,7 @@ export default function MenuPageClient() {
           };
         });
 
-  let lastCategory = "";
+  let lastFoodType = "";
 
   return (
     <div className="space-y-6">
@@ -325,6 +383,24 @@ export default function MenuPageClient() {
                 {MENU_ITEM_TYPE_OPTIONS.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={activeCategory}
+              onValueChange={handleCategoryChange}
+              disabled={!compare}
+            >
+              <SelectTrigger className={cn(TOOLBAR_CONTROL_CLASS, "w-48")}>
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={MENU_ALL_CATEGORIES}>All categories</SelectItem>
+                {sourceCategories.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -369,7 +445,7 @@ export default function MenuPageClient() {
                         COMPARE_TABLE_HEAD_STICKY_CLASS
                       )}
                     >
-                      Category
+                      Subcategory
                     </TableHead>
                     {headerColumns.map((col) => (
                       <TableHead
@@ -395,24 +471,24 @@ export default function MenuPageClient() {
                 <TableBody>
                   {compareLoading && !compare ? (
                     <LoadingState colSpan={colSpan} message="Loading summary…" />
-                  ) : !compare || compare.summary_rows.length === 0 ? (
+                  ) : !compare || pivotedRows.length === 0 ? (
                     <EmptyTableRow
                       colSpan={colSpan}
-                      message="No menu categories for the selected flights."
+                      message="No menu items for the selected flights."
                     />
                   ) : (
-                    compare.summary_rows.map((row) => {
-                      const showCategory = row.category !== lastCategory;
-                      lastCategory = row.category;
+                    pivotedRows.map((row) => {
+                      const showFoodType = row.foodType !== lastFoodType;
+                      lastFoodType = row.foodType;
                       return (
-                        <Fragment key={`${row.category}::${row.subcategory}`}>
-                          {showCategory && (
+                        <Fragment key={`${row.foodType}::${row.subcategory}`}>
+                          {showFoodType && (
                             <TableRow className="bg-muted/40 hover:bg-muted/40">
                               <TableCell
                                 colSpan={colSpan}
                                 className="py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
                               >
-                                {row.category || "Uncategorised"}
+                                {row.foodTypeLabel}
                               </TableCell>
                             </TableRow>
                           )}
@@ -423,7 +499,7 @@ export default function MenuPageClient() {
                                 "align-top font-medium"
                               )}
                             >
-                              {row.subcategory || "—"}
+                              {row.subcategory}
                             </TableCell>
                             {columns.map((col) => (
                               <TableCell
@@ -435,7 +511,7 @@ export default function MenuPageClient() {
                               >
                                 <SummaryCell
                                   counts={
-                                    row.values[col.observation_id] ??
+                                    row.summaryValues[col.observation_id] ??
                                     emptyMetricCounts()
                                   }
                                   available={col.available}
@@ -464,7 +540,7 @@ export default function MenuPageClient() {
                         COMPARE_TABLE_HEAD_STICKY_CLASS
                       )}
                     >
-                      Category
+                      Subcategory
                     </TableHead>
                     {columns.map((col) => (
                       <TableHead
@@ -483,28 +559,28 @@ export default function MenuPageClient() {
                 <TableBody>
                   {compareLoading && !compare ? (
                     <LoadingState colSpan={colSpan} message="Loading details…" />
-                  ) : !compare || compare.detail_rows.length === 0 ? (
+                  ) : !compare || pivotedRows.length === 0 ? (
                     <EmptyTableRow
                       colSpan={colSpan}
                       message="No menu items for the selected flights."
                     />
                   ) : (
                     (() => {
-                      let detailCategory = "";
-                      return compare.detail_rows.map((row) => {
-                        const showCategory = row.category !== detailCategory;
-                        detailCategory = row.category;
+                      let detailFoodType = "";
+                      return pivotedRows.map((row) => {
+                        const showFoodType = row.foodType !== detailFoodType;
+                        detailFoodType = row.foodType;
                         return (
                           <Fragment
-                            key={`detail-${row.category}::${row.subcategory}`}
+                            key={`detail-${row.foodType}::${row.subcategory}`}
                           >
-                            {showCategory && (
+                            {showFoodType && (
                               <TableRow className="bg-muted/40 hover:bg-muted/40">
                                 <TableCell
                                   colSpan={colSpan}
                                   className="py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
                                 >
-                                  {row.category || "Uncategorised"}
+                                  {row.foodTypeLabel}
                                 </TableCell>
                               </TableRow>
                             )}
@@ -515,7 +591,7 @@ export default function MenuPageClient() {
                                   "align-top font-medium"
                                 )}
                               >
-                                {row.subcategory || "—"}
+                                {row.subcategory}
                               </TableCell>
                               {columns.map((col) => (
                                 <TableCell
