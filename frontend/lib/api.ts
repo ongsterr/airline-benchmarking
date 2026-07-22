@@ -436,3 +436,117 @@ export async function getPipelineRun(runId: string): Promise<PipelineRun> {
 export async function getActivePipelineRun(): Promise<PipelineRun | null> {
   return pipelineFetchApi<PipelineRun | null>("/api/v1/pipeline/runs/active");
 }
+
+// --- Menu analysis ---
+
+export type MenuCabinNorm =
+  | "first"
+  | "business"
+  | "premium_economy"
+  | "economy";
+
+export type MenuItemType = "food" | "beverage";
+export type MenuItemTypeFilter = MenuItemType | "all";
+export type MenuBeverageType = "alcoholic" | "non_alcoholic";
+
+export type MenuFlightOption = {
+  observation_id: string;
+  flight_number: string;
+  origin_iata: string;
+  dest_iata: string;
+  service_date: string;
+  cabin_norm: MenuCabinNorm;
+  cabin_marketing: string | null;
+  label: string;
+  item_count: number;
+  available: boolean;
+};
+
+export type MenuFilterOptionsResponse = {
+  cabins: MenuCabinNorm[];
+  item_types: MenuItemType[];
+  observations: MenuFlightOption[];
+};
+
+export type MenuMetricCounts = {
+  alcoholic: number;
+  non_alcoholic: number;
+  vegetarian: number;
+  vegan: number;
+  localized: number;
+  total_items: number;
+  enriched_items: number;
+};
+
+export type MenuCompareItemDetail = {
+  code: string;
+  title: string;
+  desc: string | null;
+  position: number;
+  item_hash: string;
+  item_type: MenuItemType | null;
+  beverage_type: MenuBeverageType | null;
+  is_vegetarian: boolean | null;
+  is_vegan: boolean | null;
+  is_localized: boolean | null;
+  enriched: boolean;
+};
+
+export type MenuCompareColumn = {
+  observation_id: string;
+  flight_number: string;
+  origin_iata: string;
+  dest_iata: string;
+  service_date: string;
+  cabin_norm: MenuCabinNorm;
+  cabin_marketing: string | null;
+  label: string;
+  available: boolean;
+  item_count: number;
+};
+
+export type MenuCompareSummaryRow = {
+  category: string;
+  subcategory: string;
+  values: Record<string, MenuMetricCounts>;
+};
+
+export type MenuCompareDetailRow = {
+  category: string;
+  subcategory: string;
+  values: Record<string, MenuCompareItemDetail[]>;
+};
+
+export type MenuCompareResponse = {
+  columns: MenuCompareColumn[];
+  summary_rows: MenuCompareSummaryRow[];
+  detail_rows: MenuCompareDetailRow[];
+  cabin: MenuCabinNorm;
+  item_type: MenuItemType | null;
+};
+
+export async function getMenuFilterOptions(params?: {
+  cabin?: string;
+  item_type?: MenuItemTypeFilter;
+}): Promise<MenuFilterOptionsResponse> {
+  const query = new URLSearchParams();
+  if (params?.cabin) query.set("cabin", params.cabin);
+  if (params?.item_type) query.set("item_type", params.item_type);
+  const qs = query.toString();
+  return fetchApi(`/api/v1/menu/filter-options${qs ? `?${qs}` : ""}`);
+}
+
+export async function getMenuCompare(
+  observationIds: string[],
+  params?: {
+    cabin?: string;
+    item_type?: MenuItemTypeFilter;
+  }
+): Promise<MenuCompareResponse> {
+  const query = new URLSearchParams({
+    observation_ids: observationIds.join(","),
+  });
+  if (params?.cabin) query.set("cabin", params.cabin);
+  if (params?.item_type) query.set("item_type", params.item_type);
+  return fetchApi(`/api/v1/menu/compare?${query}`);
+}

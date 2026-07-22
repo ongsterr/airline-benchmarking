@@ -12,7 +12,7 @@ Monolithic repo with three layers:
 
 **In scope (Phase 2):** Cabin-class *flight* features (baggage, lounge, amenities) at airline × cabin level — LLM research pipeline, DB tables, API extensions, aircraft detail flight panel, **Airline Cabin Comparison** UI with column editing, and **web-triggered pipeline runs** from View 1 (Extract Airline).
 
-**In scope (Phase 3 — pipeline only):** Emirates F&B onboard menu extraction (`date` × `flight` × `origin` × `destination` × cabin) — digital-menu API fetch, deterministic HTML cleaning + flatten of category/subcategory/code/title/desc, optional Gemini expansion for blank-title descriptions, reconcile/load to menu tables, then bulk Gemini enrichment (food/beverage, dietary, non-DXB localization) for rows with `enriched_at IS NULL`. Menu API + frontend deferred.
+**In scope (Phase 3 — pipeline + read UI):** Emirates F&B onboard menu extraction (`date` × `flight` × `origin` × `destination` × cabin) — digital-menu API fetch, deterministic HTML cleaning + flatten of category/subcategory/code/title/desc, optional Gemini expansion for blank-title descriptions, reconcile/load to menu tables, then bulk Gemini enrichment (food/beverage, dietary, non-DXB localization) for rows with `enriched_at IS NULL`. **Menu read API + Menu Analysis frontend** compare observations across flights; pipeline API trigger still deferred.
 
 See [Key design decisions](#key-design-decisions) for rationale behind major choices. Update that section and the [Change log](#change-log) when scope, stack, or architecture changes.
 
@@ -27,7 +27,7 @@ flight-benchmarking/
 │   │   ├── auth.py              # single-password edit auth (HMAC session tokens)
 │   │   ├── db/                  # SQLAlchemy engine, session, Neon URL normalization
 │   │   ├── models/              # ORM models
-│   │   └── routers/             # airlines, aircraft, compare, flight_features, export, pipeline, aircraft_grouping
+│   │   └── routers/             # airlines, aircraft, compare, flight_features, menu, export, pipeline, aircraft_grouping
 │   └── alembic/                 # migrations
 ├── pipeline/
 │   ├── config.py                # target airlines, rate limits
@@ -59,6 +59,7 @@ flight-benchmarking/
 │   │   ├── fleet/               # View 2: fleet table + selection/export + infinite scroll
 │   │   ├── compare/             # View 3: aircraft side-by-side comparison + edit
 │   │   │   └── airlines/        # View 4: airline cabin comparison + edit
+│   │   ├── menu/                # View 5: menu items analysis / comparison
 │   │   └── aircraft/[svg_id]/   # Aircraft detail (hardware + flight features)
 │   ├── components/
 │   │   ├── ui/                  # shadcn primitives (table, card, badge, dialog, etc.)
@@ -69,22 +70,24 @@ flight-benchmarking/
 │   │   ├── pipeline-trigger-button.tsx # authenticated pipeline run trigger
 │   │   ├── sign-in-dialog.tsx          # shared edit-auth dialog
 │   │   ├── multi-select-filter.tsx
+│   │   ├── menu-flight-selector.tsx  # menu analysis flight×date multi-select
 │   │   ├── airline-compare-selector.tsx  # chip-based airline picker (URL-synced)
 │   │   ├── compare-column-editor.tsx     # aircraft compare edit cells
 │   │   ├── flight-compare-cell.tsx       # airline compare edit cells
 │   │   └── ...                  # PageHeader, MetricCard, AppShell, AirlineBadge, etc.
 │   ├── lib/
-│   │   ├── api.ts               # typed fetch client + auth + pipeline triggers + CSV download
+│   │   ├── api.ts               # typed fetch client + auth + pipeline triggers + CSV download + menu
 │   │   ├── use-edit-auth.ts     # compare edit session hook (aircraft + airline)
 │   │   ├── use-pipeline-run.ts    # pipeline run polling (used via PipelineRunProvider)
 │   │   ├── pipeline-run-context.tsx # shared active-run state for trigger buttons + progress panel
 │   │   ├── airline-slugs.ts       # parse/validate comma-separated AeroLOPA slugs
 │   │   ├── compare-fields.ts    # aircraft field types/labels (mirrors shared/compare_fields.py)
 │   │   ├── flight-fields.ts     # flight field types/labels (mirrors shared/flight_fields.py)
+│   │   ├── menu-fields.ts       # menu summary metric labels + flight label helpers
 │   │   ├── constants.ts         # MIN/MAX compare limits, FLEET_PAGE_SIZE
 │   │   └── design-tokens.ts     # table density, cabin keys, compare column classes
 │   └── components.json          # shadcn config
-├── tests/                       # API, compare, export, flight update, pipeline trigger, airline upsert tests
+├── tests/                       # API, compare, export, flight update, pipeline trigger, menu API, airline upsert tests
 ├── scripts/                     # reset_schema, deck migration, verification helpers
 ├── docs/
 │   ├── architecture.md
@@ -387,6 +390,8 @@ Base URL: `http://localhost:8000`
 | `GET /api/v1/pipeline/runs/{run_id}` | Pipeline status | Poll run progress (counts update incrementally during execution); `require_edit_auth` |
 | `GET /api/v1/pipeline/runs/active` | Pipeline status | Current in-progress run or `null` (used to resume progress panel on page load); `require_edit_auth` |
 | `GET /api/v1/export.csv?ids=ek-359g,ba-19a` | Fleet export | CSV — one row per cabin per config (hardware fields) |
+| `GET /api/v1/menu/filter-options?cabin=business&item_type=all` | Menu Analysis | Distinct cabins + selectable observations (flight×route×date) for the cabin; `item_count` respects `item_type` (`food` / `beverage` / `all`) |
+| `GET /api/v1/menu/compare?observation_ids=…&cabin=business&item_type=food` | Menu Analysis | `MenuCompareResponse`: summary + detail matrices for 2–8 observations; unioned category/subcategory rows; metric counts exclude null enrichment |
 
 **Aircraft compare response** (`shared/schemas.py`):
 
@@ -410,6 +415,15 @@ Base URL: `http://localhost:8000`
 | `source_url` | `str \| null` | Optional reference URL update (explicit presence detected via `model_fields_set`) |
 
 Field coercion: `shared/flight_fields.coerce_flight_field_value` (string/int/list; `amenity_kit` accepts comma-separated or JSON array).
+
+**Menu compare response** (`MenuCompareResponse`):
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `columns` | `MenuCompareColumn[]` | Per-observation header: flight, route, date, cabin, `available`, `item_count` |
+| `summary_rows` | `MenuCompareSummaryRow[]` | Category/subcategory rows; `values[observation_id]` → `MenuMetricCounts` (alcoholic, non_alcoholic, vegetarian, vegan, localized; null enrichment excluded) |
+| `detail_rows` | `MenuCompareDetailRow[]` | Same grouping; `values[observation_id]` → ordered item list with enrichment flags |
+| `cabin` / `item_type` | echo | Global filters applied to the response |
 
 **Pipeline trigger schemas** (`shared/schemas.py`):
 
@@ -438,9 +452,9 @@ Field coercion: `shared/flight_fields.coerce_flight_field_value` (string/int/lis
 - **Typography:** Inter (UI) + Geist Mono (config IDs); compact `text-sm` base, `text-xs` tables.
 - **Tokens:** `frontend/lib/design-tokens.ts` — table density classes, control widths, cabin keys, airline label mappings, `COMPARE_AIRLINE_COLUMN_CLASS` / `COMPARE_FEATURE_COLUMN_CLASS` (fixed-width wrapping columns for **both** airline and aircraft compare; requires `table-fixed` on the table)
 - **Core shadcn components:** `table`, `card`, `badge`, `button`, `select`, `input`, `checkbox`, `tabs`, `separator`, `skeleton`, `tooltip`, `dialog`
-- **App-level composites:** `PageHeader`, `MetricCard`, `SectionCard`, `EmptyState`, `LoadingState`, `TableToolbar`, `AirlineBadge`, `AirlineDashboard`, `AirlineExtractSection`, `PipelineProgressPanel`, `PipelineTriggerButton`, `SignInDialog`, `MultiSelectFilter`, `AirlineCompareSelector`, `CompareValueCell` / `CompareFieldInput`, `FlightCompareValueCell` / `FlightCompareFieldInput`
+- **App-level composites:** `PageHeader`, `MetricCard`, `SectionCard`, `EmptyState`, `LoadingState`, `TableToolbar`, `AirlineBadge`, `AirlineDashboard`, `AirlineExtractSection`, `PipelineProgressPanel`, `PipelineTriggerButton`, `SignInDialog`, `MultiSelectFilter`, `MenuFlightSelector`, `AirlineCompareSelector`, `CompareValueCell` / `CompareFieldInput`, `FlightCompareValueCell` / `FlightCompareFieldInput`
 - **Page template:** `PageHeader` → optional `MetricCard` grid → `SectionCard`(s) with edge-to-edge table; shared empty/loading states
-- **Layout shell:** `AppShell` with shadcn `Tabs` (line variant) for **Airline** / **Fleet** / **Compare Aircraft** / **Compare Airline** navigation; subtitle **Features Comparison**; `PipelineRunProvider` wraps page content for shared pipeline run polling
+- **Layout shell:** `AppShell` with shadcn `Tabs` (line variant) for **Airline** / **Fleet** / **Compare Aircraft** / **Compare Airline** / **Menu Analysis** navigation; subtitle **Features Comparison**; `PipelineRunProvider` wraps page content for shared pipeline run polling
 
 ### View 1 — Airline Fleet Summary (`/`)
 
@@ -525,7 +539,16 @@ flowchart LR
 - Table uses `table-fixed` with `COMPARE_AIRLINE_COLUMN_CLASS` (`w-48`, left-aligned, wrapping) so long amenity lists do not overlap adjacent columns
 - Empty state (`< 2` airlines): filter card + `EmptyState`
 
-**API integration:** `NEXT_PUBLIC_API_URL` env var; server components for summary initial data; client components for fleet filters, both compare views, and edit flows. Use shadcn `Skeleton` for loading states.
+### View 5 — Menu Items Analysis (`/menu`)
+
+- Compares Emirates onboard menus across **2–8 flight × route × date** observations for one global cabin and item type
+- **Filters** (`SectionCard`, overflow visible): cabin `Select`, item type `Select` (`all` / `food` / `beverage`), `MenuFlightSelector` multi-select (labels show flight, route, date, item count / unavailable)
+- **URL state:** `?cabin=business&item_type=all&ids=<observation_uuid>,…` — changing cabin or item type clears incompatible selections
+- **Summary** matrix: rows grouped by API `category` → `subcategory`; one column per selected flight; each cell stacks alcoholic / non-alcoholic / vegetarian / vegan / localised counts (true enrichment flags only; unenriched noted separately)
+- **Item detail** matrix: same grouping; each cell lists item titles (desc + flag chips) in source `position` order; unavailable menus shown distinctly from empty subcategory zeros
+- Data from `GET /api/v1/menu/filter-options` + `GET /api/v1/menu/compare`; read-only (no edit auth)
+
+**API integration:** `NEXT_PUBLIC_API_URL` env var; server components for summary initial data; client components for fleet filters, both compare views, menu analysis, and edit flows. Use shadcn `Skeleton` for loading states.
 
 ## Local development
 
@@ -591,12 +614,13 @@ See [`.env.example`](../.env.example).
 | DB schema + Alembic migrations (incl. dual-deck + flight features) | Done |
 | Aircraft pipeline discover + fetch + parse + normalize + load | Done |
 | Flight pipeline research + load (`run_flight.py`) | Done |
-| Emirates menu pipeline API fetch + deterministic clean/flatten + optional blank-title expand + load + bulk enrichment (`run_menu.py`) | Done (CLI; API/UI deferred) |
-| FastAPI backend (summary, fleet, compare, airline compare, export, auth, pipeline triggers) | Done |
+| Emirates menu pipeline API fetch + deterministic clean/flatten + optional blank-title expand + load + bulk enrichment (`run_menu.py`) | Done (CLI; API trigger deferred) |
+| Menu read API (`/api/v1/menu/filter-options`, `/api/v1/menu/compare`) + Menu Analysis UI | Done |
+| FastAPI backend (summary, fleet, compare, airline compare, menu, export, auth, pipeline triggers) | Done |
 | Web UI pipeline triggers (Extract Airline on View 1) | Done |
 | Multi-slug Extract Airline input + live progress panel | Done |
 | Dual-deck API grouping (`aircraft_grouping.py`) | Done |
-| Next.js frontend (4 views + fleet infinite scroll + CSV export) | Done |
+| Next.js frontend (5 views + fleet infinite scroll + CSV export + menu analysis) | Done |
 | Aircraft compare edit auth + column PATCH | Done |
 | Airline compare edit + `PATCH /flight-features` | Done |
 | Integration tests (`tests/`) incl. flight compare/update, airline upsert, pipeline trigger + mid-run progress poll | Done |
@@ -617,7 +641,7 @@ See [`.env.example`](../.env.example).
 - **Air India slug** — verify AeroLOPA uses `ai` during discovery; adjust config if different
 - **Production edit auth** — set `EDIT_PASSWORD` and `SESSION_SECRET` on Railway before enabling compare edits and pipeline triggers in production
 - **Flight pipeline on Railway** — set `GOOGLE_API_KEY` for Extract flight / `run_flight` triggers
-- **Menu pipeline Phase 3b** — API trigger (`POST /api/v1/pipeline/menu`), read endpoints, and frontend for Emirates F&B menus (pipeline CLI is done)
+- **Menu pipeline Phase 3b** — API trigger (`POST /api/v1/pipeline/menu`) still deferred; read endpoints + Menu Analysis UI are done
 - **Emirates cabin URL codes** — confirm premium_economy=`w` (and first=`f`) against live onboard-menu responses if PE menus look empty
 
 ## Key design decisions
@@ -657,6 +681,7 @@ Track significant architectural choices here. When a decision is reversed, mark 
 | KD-032 | **Menu API mirror transform** — deterministic clean/flatten only; store raw API `category` / `subcategory` / `code` / `title` / `desc`; `extractor_version=menu_api_transform_v1`; no menu LLM | API already structured; cleaning is sufficient; removes Gemini latency/cost from menu runs | Canonical taxonomy + LLM classification; keep `course` enum | 2026-07-21 — partial **Superseded** by KD-033 |
 | KD-033 | **Blank-title menu expansion** — one Gemini call per cabin only for empty-title + desc items; split into `BASE_N` rows; inherit category/subcategory; preserve originals on failure (`api` / `api+llm` / `api_llm_fallback`) | Soft-drink style API rows list many products in one desc; targeted LLM avoids full-menu latency | Full-menu LLM; rules-only comma split; keep blank titles forever | 2026-07-21 |
 | KD-034 | **Bulk menu enrichment** — after load, enrich only `enriched_at IS NULL` rows in batches of 50; food/beverage + dietary + non-DXB localization; reconcile load preserves enrichment; partial valid updates + retry | Incremental cost; typed applicability; localization tied to non-DXB endpoint | Enrich on every extract; rules-only labels; delete-and-reinsert items | 2026-07-21 |
+| KD-035 | **Menu Analysis read API + UI** — `GET /api/v1/menu/filter-options` + `/compare`; global cabin + item_type; 2–8 observation columns; summary metric stacks + detail item lists by category/subcategory | Operators compare F&B mix across flights without CSV; reuses compare column limits and enrichment booleans | Per-flight cabin tabs; client-side pivot of raw items; tag arrays | 2026-07-21 |
 | KD-014 | **Slim API DTOs** — no raw HTML or seat-level data in list/summary endpoints | Keeps fleet and summary views fast; detail endpoint for drill-down | Return full source payload everywhere | 2026-06-29 |
 | KD-015 | **Next.js App Router + shadcn/ui** — compact light theme, TanStack Table | Standardised design system per readme; data-dense tables inspired by Eleken/LCM Hub | MUI, Ant Design, plain Tailwind | 2026-06-29 |
 | KD-016 | **Deploy split:** frontend → Vercel, backend → Railway | Matches readme deployment targets; fits static/SSR frontend + long-running API | Single host; containerise both on Railway | 2026-06-29 |
@@ -667,6 +692,7 @@ Record notable architecture, schema, API, and deployment changes here (newest fi
 
 | Date | Change |
 |------|--------|
+| 2026-07-21 | Menu Analysis: `GET /api/v1/menu/filter-options` + `/compare`, View 5 UI (`/menu`), summary/detail matrices, `ensure_menu_columns` on API startup — KD-035 |
 | 2026-07-21 | Bulk menu enrichment: typed food/beverage fields, reconcile load preserves enrichment, batch Gemini on `enriched_at IS NULL`, `.enrichment.json` audit — KD-034 |
 | 2026-07-21 | Blank-title menu expansion: batch Gemini per cabin for empty title + desc; `BASE_N` codes; fallback preserves originals — KD-033 |
 | 2026-07-21 | Menu pipeline simplified: drop Gemini/taxonomy; deterministic API mirror (`category`/`subcategory`/`code`/`title`/`desc`); `menu_api_transform_v1` — KD-032 |

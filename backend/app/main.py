@@ -17,7 +17,11 @@ from backend.app.auth import (
 )
 
 from backend.app.config import settings
-from backend.app.db.migrate import ensure_flight_source_columns, ensure_pipeline_run_columns
+from backend.app.db.migrate import (
+    ensure_flight_source_columns,
+    ensure_menu_columns,
+    ensure_pipeline_run_columns,
+)
 from backend.app.db.session import engine, get_db, init_schema
 from backend.app.models.entities import Base
 from backend.app.routers import aircraft as aircraft_router
@@ -25,6 +29,7 @@ from backend.app.routers import airlines as airlines_router
 from backend.app.routers import compare as compare_router
 from backend.app.routers import export as export_router
 from backend.app.routers import flight_features as flight_features_router
+from backend.app.routers import menu as menu_router
 from backend.app.routers import pipeline as pipeline_router
 from shared.constants import MAX_COMPARE_CONFIGS
 from shared.schemas import (
@@ -37,6 +42,8 @@ from shared.schemas import (
     CabinFlightFeatures,
     CompareAirlineResponse,
     CompareResponse,
+    MenuCompareResponse,
+    MenuFilterOptionsResponse,
     PipelineRunResponse,
     PipelineTriggerRequest,
 )
@@ -73,6 +80,7 @@ def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
     ensure_flight_source_columns()
     ensure_pipeline_run_columns()
+    ensure_menu_columns()
 
 
 @app.get("/health")
@@ -199,6 +207,67 @@ def compare_airlines(
             detail=f"Maximum {MAX_COMPARE_CONFIGS} airlines for comparison",
         )
     return flight_features_router.compare_airlines(db, airline_slugs, cabin=cabin)
+
+
+@app.get("/api/v1/menu/filter-options", response_model=MenuFilterOptionsResponse)
+def menu_filter_options(
+    cabin: str | None = Query(
+        "business",
+        description="Cabin class key: first, business, premium_economy, economy",
+    ),
+    item_type: str | None = Query(
+        "all",
+        description="Item type filter: food, beverage, or all",
+    ),
+    db: Session = Depends(get_db),
+) -> MenuFilterOptionsResponse:
+    try:
+        return menu_router.get_menu_filter_options(db, cabin=cabin, item_type=item_type)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/v1/menu/compare", response_model=MenuCompareResponse)
+def menu_compare(
+    observation_ids: str = Query(
+        ...,
+        description="Comma-separated menu observation UUIDs",
+    ),
+    cabin: str | None = Query(
+        "business",
+        description="Cabin class key: first, business, premium_economy, economy",
+    ),
+    item_type: str | None = Query(
+        "all",
+        description="Item type filter: food, beverage, or all",
+    ),
+    db: Session = Depends(get_db),
+) -> MenuCompareResponse:
+    try:
+        ids = menu_router.parse_observation_ids(observation_ids)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if len(ids) < 2:
+        raise HTTPException(
+            status_code=400,
+            detail="Provide at least 2 observation ids to compare",
+        )
+    if len(ids) > MAX_COMPARE_CONFIGS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Maximum {MAX_COMPARE_CONFIGS} menu observations for comparison",
+        )
+    try:
+        return menu_router.compare_menus(
+            db,
+            observation_ids=ids,
+            cabin=cabin,
+            item_type=item_type,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.patch("/api/v1/airlines/{slug}/flight-features", response_model=CabinFlightFeatures)

@@ -300,6 +300,91 @@ class MenuExtraction(BaseModel):
     items: list[MenuItem] = Field(default_factory=list)
 
 
+# --- Menu analysis / compare API ---
+
+MenuItemTypeFilter = Literal["food", "beverage", "all"]
+
+
+class MenuFlightOption(BaseModel):
+    """Selectable flight×route×date×cabin observation for menu comparison."""
+
+    observation_id: str
+    flight_number: str
+    origin_iata: str
+    dest_iata: str
+    service_date: date
+    cabin_norm: MenuCabinNorm
+    cabin_marketing: str | None = None
+    label: str
+    item_count: int = 0
+    available: bool = True
+
+
+class MenuFilterOptionsResponse(BaseModel):
+    cabins: list[MenuCabinNorm] = Field(default_factory=list)
+    item_types: list[MenuItemType] = Field(default_factory=lambda: ["food", "beverage"])
+    observations: list[MenuFlightOption] = Field(default_factory=list)
+
+
+class MenuMetricCounts(BaseModel):
+    """Per category/subcategory × flight summary counts (true enrichment flags only)."""
+
+    alcoholic: int = 0
+    non_alcoholic: int = 0
+    vegetarian: int = 0
+    vegan: int = 0
+    localized: int = 0
+    total_items: int = 0
+    enriched_items: int = 0
+
+
+class MenuCompareItemDetail(BaseModel):
+    code: str = ""
+    title: str = ""
+    desc: str | None = None
+    position: int = 1
+    item_hash: str = ""
+    item_type: MenuItemType | None = None
+    beverage_type: MenuBeverageType | None = None
+    is_vegetarian: bool | None = None
+    is_vegan: bool | None = None
+    is_localized: bool | None = None
+    enriched: bool = False
+
+
+class MenuCompareColumn(BaseModel):
+    observation_id: str
+    flight_number: str
+    origin_iata: str
+    dest_iata: str
+    service_date: date
+    cabin_norm: MenuCabinNorm
+    cabin_marketing: str | None = None
+    label: str
+    available: bool = True
+    item_count: int = 0
+
+
+class MenuCompareSummaryRow(BaseModel):
+    category: str
+    subcategory: str
+    values: dict[str, MenuMetricCounts] = Field(default_factory=dict)
+
+
+class MenuCompareDetailRow(BaseModel):
+    category: str
+    subcategory: str
+    values: dict[str, list[MenuCompareItemDetail]] = Field(default_factory=dict)
+
+
+class MenuCompareResponse(BaseModel):
+    columns: list[MenuCompareColumn] = Field(default_factory=list)
+    summary_rows: list[MenuCompareSummaryRow] = Field(default_factory=list)
+    detail_rows: list[MenuCompareDetailRow] = Field(default_factory=list)
+    cabin: MenuCabinNorm
+    item_type: MenuItemType | None = None
+
+
 PipelineType = Literal["hardware", "flight", "menu"]
 PipelineRunStatus = Literal["running", "completed", "failed"]
 
