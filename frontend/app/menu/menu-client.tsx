@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Download } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { EmptyTableRow, LoadingState } from "@/components/loading-state";
 import { MenuExtractSection } from "@/components/menu-extract-section";
@@ -10,6 +11,7 @@ import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import { SignInDialog } from "@/components/sign-in-dialog";
 import { TableToolbar } from "@/components/table-toolbar";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -43,7 +45,6 @@ import {
 import {
   getMenuCompare,
   getMenuFilterOptions,
-  type MenuCompareItemDetail,
   type MenuCompareResponse,
   type MenuFlightOption,
   type MenuItemTypeFilter,
@@ -53,6 +54,7 @@ import {
   MAX_COMPARE_CONFIGS,
   MIN_COMPARE_CONFIGS,
 } from "@/lib/constants";
+import { downloadCsv } from "@/lib/csv";
 import {
   emptyMetricCounts,
   formatMenuFlightLabel,
@@ -65,6 +67,7 @@ import {
   SUMMARY_METRICS_BY_FOOD_TYPE,
   type MenuFoodTypeKey,
 } from "@/lib/menu-fields";
+import { buildMenuItemCsv } from "@/lib/menu-item-csv";
 import { useEditAuth } from "@/lib/use-edit-auth";
 import { cn } from "@/lib/utils";
 
@@ -147,18 +150,27 @@ function SummaryCell({
   );
 }
 
-function LocalizedFlag({ item }: { item: MenuCompareItemDetail }) {
+function EnrichmentFlag({
+  label,
+  confidence,
+  note,
+  emphasized = false,
+}: {
+  label: string;
+  confidence: number | null | undefined;
+  note?: string | null;
+  emphasized?: boolean;
+}) {
   const confidencePct =
-    item.localization_confidence != null
-      ? Math.round(item.localization_confidence * 100)
-      : null;
+    confidence != null ? Math.round(confidence * 100) : null;
+  const triggerClass = emphasized
+    ? "cursor-default font-semibold uppercase tracking-wide text-primary"
+    : "cursor-default uppercase tracking-wide";
   return (
     <Tooltip>
-      <TooltipTrigger className="cursor-default font-semibold uppercase tracking-wide text-primary">
-        localised
-      </TooltipTrigger>
+      <TooltipTrigger className={triggerClass}>{label}</TooltipTrigger>
       <TooltipContent className="max-w-xs flex-col items-start gap-0.5 whitespace-normal text-left">
-        {item.localization_note && <p>{item.localization_note}</p>}
+        {note && <p>{note}</p>}
         {confidencePct != null && <p>Confidence {confidencePct}%</p>}
       </TooltipContent>
     </Tooltip>
@@ -200,7 +212,22 @@ function DetailCell({
                   <span key={flag} className="inline-flex items-center gap-1.5">
                     {index > 0 && <span aria-hidden>·</span>}
                     {flag === "localised" ? (
-                      <LocalizedFlag item={item} />
+                      <EnrichmentFlag
+                        label="localised"
+                        confidence={item.localization_confidence}
+                        note={item.localization_note}
+                        emphasized
+                      />
+                    ) : flag === "vegetarian" ? (
+                      <EnrichmentFlag
+                        label="vegetarian"
+                        confidence={item.vegetarian_confidence}
+                      />
+                    ) : flag === "vegan" ? (
+                      <EnrichmentFlag
+                        label="vegan"
+                        confidence={item.vegan_confidence}
+                      />
                     ) : (
                       <span>{flag}</span>
                     )}
@@ -248,6 +275,7 @@ export default function MenuPageClient() {
   const [signInPassword, setSignInPassword] = useState("");
   const [signInError, setSignInError] = useState<string | null>(null);
   const [signingIn, setSigningIn] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const canTrigger = isAuthenticated;
 
@@ -465,6 +493,22 @@ export default function MenuPageClient() {
     syncUrl({ ids: next });
   };
 
+  const handleDownloadMenuCsv = () => {
+    if (!compare || compareLoading || exporting) return;
+    setExporting(true);
+    try {
+      const content = buildMenuItemCsv(compare, activeCategory);
+      const filename = `menu-items-${cabin}-${new Date().toISOString().slice(0, 10)}.csv`;
+      downloadCsv(content, filename);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to download CSV";
+      window.alert(message);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const columns = compare?.columns ?? [];
   const canCompare = selectedIds.length >= MIN_COMPARE_CONFIGS;
   const colSpan = Math.max(columns.length, 1) + 1;
@@ -562,6 +606,17 @@ export default function MenuPageClient() {
                 ? "Loading flights…"
                 : `${selectedIds.length} / ${MAX_COMPARE_CONFIGS} selected`}
             </span>
+
+            <Button
+              size="sm"
+              variant="outline"
+              className="ml-auto"
+              disabled={!compare || pivotedRows.length === 0 || exporting}
+              onClick={handleDownloadMenuCsv}
+            >
+              <Download className="mr-1 h-3 w-3" />
+              {exporting ? "Exporting..." : "Download CSV"}
+            </Button>
           </TableToolbar>
           {optionsError && (
             <p className="mt-2 text-xs text-destructive">{optionsError}</p>

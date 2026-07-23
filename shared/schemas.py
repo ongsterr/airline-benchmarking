@@ -263,6 +263,8 @@ class MenuItem(BaseModel):
     is_vegetarian: bool | None = None
     is_vegan: bool | None = None
     is_localized: bool | None = None
+    vegetarian_confidence: float | None = None
+    vegan_confidence: float | None = None
     localization_confidence: float | None = None
     localization_note: str | None = None
     enrichment_version: str | None = None
@@ -350,6 +352,8 @@ class MenuCompareItemDetail(BaseModel):
     is_vegan: bool | None = None
     is_localized: bool | None = None
     localization_note: str | None = None
+    vegetarian_confidence: float | None = None
+    vegan_confidence: float | None = None
     localization_confidence: float | None = None
     enriched: bool = False
 

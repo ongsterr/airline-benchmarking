@@ -107,6 +107,14 @@ def ensure_menu_columns() -> None:
             ),
             (
                 f'ALTER TABLE "{schema}".menu_items '
+                f"ADD COLUMN IF NOT EXISTS vegetarian_confidence DOUBLE PRECISION"
+            ),
+            (
+                f'ALTER TABLE "{schema}".menu_items '
+                f"ADD COLUMN IF NOT EXISTS vegan_confidence DOUBLE PRECISION"
+            ),
+            (
+                f'ALTER TABLE "{schema}".menu_items '
                 f"ADD COLUMN IF NOT EXISTS localization_confidence DOUBLE PRECISION"
             ),
             (

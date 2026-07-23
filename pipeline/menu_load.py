@@ -47,6 +47,8 @@ def _clear_enrichment(row: MenuItem) -> None:
     row.is_vegetarian = None
     row.is_vegan = None
     row.is_localized = None
+    row.vegetarian_confidence = None
+    row.vegan_confidence = None
     row.localization_confidence = None
     row.localization_note = None
     row.enrichment_version = None
@@ -182,6 +184,8 @@ def upsert_menu_extraction(
                     is_vegetarian=item.is_vegetarian,
                     is_vegan=item.is_vegan,
                     is_localized=item.is_localized,
+                    vegetarian_confidence=item.vegetarian_confidence,
+                    vegan_confidence=item.vegan_confidence,
                     localization_confidence=item.localization_confidence,
                     localization_note=item.localization_note,
                     enrichment_version=item.enrichment_version,
@@ -206,6 +210,8 @@ def upsert_menu_extraction(
             row.is_vegetarian = item.is_vegetarian
             row.is_vegan = item.is_vegan
             row.is_localized = item.is_localized
+            row.vegetarian_confidence = item.vegetarian_confidence
+            row.vegan_confidence = item.vegan_confidence
             row.localization_confidence = item.localization_confidence
             row.localization_note = item.localization_note
             row.enrichment_version = item.enrichment_version

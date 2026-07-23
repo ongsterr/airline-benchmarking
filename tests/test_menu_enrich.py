@@ -51,6 +51,9 @@ def test_markdown_table_includes_item_fields() -> None:
     )
     assert "DXB" in human and "DAC" in human
     assert "item_type" in system
+    assert "vegetarian_confidence" in system
+    assert "vegan_confidence" in system
+    assert "≥ 0.90" in system
 
 
 def test_validate_beverage_and_food_applicability() -> None:
@@ -63,6 +66,8 @@ def test_validate_beverage_and_food_applicability() -> None:
             "is_vegetarian": True,  # ignored / cleared
             "is_vegan": False,
             "is_localized": True,
+            "vegetarian_confidence": 0.9,
+            "vegan_confidence": 0.5,
             "localization_confidence": 0.5,
             "localization_note": "x",
         },
@@ -73,6 +78,8 @@ def test_validate_beverage_and_food_applicability() -> None:
     assert bev["beverage_type"] == "alcoholic"
     assert bev["is_vegetarian"] is None
     assert bev["is_localized"] is None
+    assert bev["vegetarian_confidence"] is None
+    assert bev["vegan_confidence"] is None
 
     food = validate_enrichment_row(
         {
@@ -83,6 +90,8 @@ def test_validate_beverage_and_food_applicability() -> None:
             "is_vegetarian": False,
             "is_vegan": True,  # forces vegetarian
             "is_localized": True,
+            "vegetarian_confidence": 0.95,
+            "vegan_confidence": 0.95,
             "localization_confidence": 0.9,
             "localization_note": "Bengali khichuri",
         },
@@ -92,6 +101,8 @@ def test_validate_beverage_and_food_applicability() -> None:
     assert food is not None
     assert food["is_vegan"] is True
     assert food["is_vegetarian"] is True
+    assert food["vegetarian_confidence"] == 0.95
+    assert food["vegan_confidence"] == 0.95
 
     bad_conf = validate_enrichment_row(
         {
@@ -101,6 +112,8 @@ def test_validate_beverage_and_food_applicability() -> None:
             "is_vegetarian": True,
             "is_vegan": False,
             "is_localized": False,
+            "vegetarian_confidence": 0.9,
+            "vegan_confidence": 0.9,
             "localization_confidence": 1.5,
             "localization_note": None,
         },
@@ -117,6 +130,73 @@ def test_validate_beverage_and_food_applicability() -> None:
     assert mismatch is None
 
 
+def test_confidence_threshold_gates_booleans() -> None:
+    below = validate_enrichment_row(
+        {
+            "item_hash": "m:10",
+            "code": "10",
+            "item_type": "food",
+            "beverage_type": None,
+            "is_vegetarian": True,
+            "is_vegan": True,
+            "is_localized": True,
+            "vegetarian_confidence": 0.89,
+            "vegan_confidence": 0.89,
+            "localization_confidence": 0.89,
+            "localization_note": "borderline cuisine cue",
+        },
+        expected_hash="m:10",
+        expected_code="10",
+    )
+    assert below is not None
+    assert below["is_vegetarian"] is False
+    assert below["is_vegan"] is False
+    assert below["is_localized"] is False
+    assert below["vegetarian_confidence"] == 0.89
+    assert below["vegan_confidence"] == 0.89
+    assert below["localization_confidence"] == 0.89
+
+    at_threshold = validate_enrichment_row(
+        {
+            "item_hash": "m:11",
+            "code": "11",
+            "item_type": "food",
+            "beverage_type": None,
+            "is_vegetarian": True,
+            "is_vegan": False,
+            "is_localized": True,
+            "vegetarian_confidence": 0.90,
+            "vegan_confidence": 0.40,
+            "localization_confidence": 0.90,
+            "localization_note": "clear regional dish",
+        },
+        expected_hash="m:11",
+        expected_code="11",
+    )
+    assert at_threshold is not None
+    assert at_threshold["is_vegetarian"] is True
+    assert at_threshold["is_vegan"] is False
+    assert at_threshold["is_localized"] is True
+
+    missing_veg_conf = validate_enrichment_row(
+        {
+            "item_hash": "m:12",
+            "code": "12",
+            "item_type": "food",
+            "is_vegetarian": True,
+            "is_vegan": False,
+            "is_localized": False,
+            "vegetarian_confidence": None,
+            "vegan_confidence": 0.9,
+            "localization_confidence": 0.5,
+            "localization_note": None,
+        },
+        expected_hash="m:12",
+        expected_code="12",
+    )
+    assert missing_veg_conf is None
+
+
 def test_apply_enrichment_partial_and_duplicates() -> None:
     rows = [
         SimpleNamespace(
@@ -127,6 +207,8 @@ def test_apply_enrichment_partial_and_duplicates() -> None:
             is_vegetarian=None,
             is_vegan=None,
             is_localized=None,
+            vegetarian_confidence=None,
+            vegan_confidence=None,
             localization_confidence=None,
             localization_note=None,
             enrichment_version=None,
@@ -140,6 +222,8 @@ def test_apply_enrichment_partial_and_duplicates() -> None:
             is_vegetarian=None,
             is_vegan=None,
             is_localized=None,
+            vegetarian_confidence=None,
+            vegan_confidence=None,
             localization_confidence=None,
             localization_note=None,
             enrichment_version=None,
@@ -156,6 +240,8 @@ def test_apply_enrichment_partial_and_duplicates() -> None:
                 "is_vegetarian": None,
                 "is_vegan": None,
                 "is_localized": None,
+                "vegetarian_confidence": None,
+                "vegan_confidence": None,
                 "localization_confidence": None,
                 "localization_note": None,
             },
@@ -172,6 +258,8 @@ def test_apply_enrichment_partial_and_duplicates() -> None:
                 "is_vegetarian": True,
                 "is_vegan": False,
                 "is_localized": False,
+                "vegetarian_confidence": 0.95,
+                "vegan_confidence": 0.2,
                 "localization_confidence": 0.8,
                 "localization_note": None,
             },
@@ -210,6 +298,8 @@ def test_enrich_observation_batches_and_fallback() -> None:
                 is_vegetarian=None,
                 is_vegan=None,
                 is_localized=None,
+                vegetarian_confidence=None,
+                vegan_confidence=None,
                 localization_confidence=None,
                 localization_note=None,
                 enrichment_version=None,
@@ -232,6 +322,8 @@ def test_enrich_observation_batches_and_fallback() -> None:
                     "is_vegetarian": False,
                     "is_vegan": False,
                     "is_localized": False,
+                    "vegetarian_confidence": 0.7,
+                    "vegan_confidence": 0.6,
                     "localization_confidence": 0.7,
                     "localization_note": "generic",
                 }
@@ -264,6 +356,8 @@ def test_base_fields_equal_and_clear_enrichment() -> None:
         is_vegetarian=True,
         is_vegan=False,
         is_localized=False,
+        vegetarian_confidence=0.95,
+        vegan_confidence=0.4,
         localization_confidence=0.5,
         localization_note="n",
         enrichment_version="v",
@@ -281,6 +375,8 @@ def test_base_fields_equal_and_clear_enrichment() -> None:
     assert not _base_fields_equal(row, item)  # type: ignore[arg-type]
     _clear_enrichment(row)  # type: ignore[arg-type]
     assert row.item_type is None
+    assert row.vegetarian_confidence is None
+    assert row.vegan_confidence is None
     assert row.enriched_at is None
 
 
@@ -295,6 +391,8 @@ def test_sample_style_food_and_beverage_validation() -> None:
             "is_vegetarian": True,
             "is_vegan": True,
             "is_localized": False,
+            "vegetarian_confidence": 0.95,
+            "vegan_confidence": 0.95,
             "localization_confidence": 0.88,
             "localization_note": "Western vegan dish not specific to LHR",
         },
@@ -302,6 +400,7 @@ def test_sample_style_food_and_beverage_validation() -> None:
         expected_code="76246",
     )
     assert vegan and vegan["is_vegan"] is True
+    assert vegan["is_localized"] is False
 
     # DAC-localized food
     dac = validate_enrichment_row(
@@ -313,6 +412,8 @@ def test_sample_style_food_and_beverage_validation() -> None:
             "is_vegetarian": False,
             "is_vegan": False,
             "is_localized": True,
+            "vegetarian_confidence": 0.98,
+            "vegan_confidence": 0.98,
             "localization_confidence": 0.93,
             "localization_note": "Bengali-style mutton khichuri for DAC",
         },
@@ -331,6 +432,8 @@ def test_sample_style_food_and_beverage_validation() -> None:
             "is_vegetarian": None,
             "is_vegan": None,
             "is_localized": None,
+            "vegetarian_confidence": None,
+            "vegan_confidence": None,
             "localization_confidence": None,
             "localization_note": None,
         },

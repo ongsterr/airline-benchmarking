@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 ENRICHMENT_BATCH_SIZE = 50
 ITEM_TYPES = frozenset({"food", "beverage"})
 BEVERAGE_TYPES = frozenset({"alcoholic", "non_alcoholic"})
+CONFIDENCE_TRUE_THRESHOLD = 0.90
 
 
 @dataclass
@@ -60,6 +61,23 @@ def _as_bool(value: Any) -> bool | None:
     return None
 
 
+def _parse_confidence(value: Any) -> tuple[float | None, bool]:
+    """Return (confidence, ok). ok=False when the value is present but invalid."""
+    if value is None:
+        return None, True
+    try:
+        confidence = float(value)
+    except (TypeError, ValueError):
+        return None, False
+    if confidence < 0.0 or confidence > 1.0:
+        return None, False
+    return confidence, True
+
+
+def _gate_bool(flag: bool | None, confidence: float | None) -> bool:
+    return bool(flag) and confidence is not None and confidence >= CONFIDENCE_TRUE_THRESHOLD
+
+
 def validate_enrichment_row(
     raw: dict[str, Any],
     *,
@@ -87,34 +105,48 @@ def validate_enrichment_row(
         note = str(note)
     note = (note or "").strip() or None
 
-    conf_raw = raw.get("localization_confidence")
-    confidence: float | None
-    try:
-        confidence = float(conf_raw) if conf_raw is not None else None
-    except (TypeError, ValueError):
+    localization_confidence, loc_ok = _parse_confidence(raw.get("localization_confidence"))
+    vegetarian_confidence, veg_ok = _parse_confidence(raw.get("vegetarian_confidence"))
+    vegan_confidence, vegan_ok = _parse_confidence(raw.get("vegan_confidence"))
+    if not (loc_ok and veg_ok and vegan_ok):
         return None
-    if confidence is not None:
-        if confidence < 0.0 or confidence > 1.0:
-            return None
 
     if item_type == "beverage":
         if beverage_type not in BEVERAGE_TYPES:
             return None
-        if any(v is not None for v in (is_vegetarian, is_vegan, is_localized, confidence, note)):
+        food_fields = (
+            is_vegetarian,
+            is_vegan,
+            is_localized,
+            localization_confidence,
+            vegetarian_confidence,
+            vegan_confidence,
+            note,
+        )
+        if any(v is not None for v in food_fields):
             # Allow clearing extras by forcing nulls rather than rejecting lightly polluted rows
             is_vegetarian = None
             is_vegan = None
             is_localized = None
-            confidence = None
+            localization_confidence = None
+            vegetarian_confidence = None
+            vegan_confidence = None
             note = None
     else:
         if beverage_type is not None:
             beverage_type = None
         if is_vegetarian is None or is_vegan is None or is_localized is None:
             return None
-        if confidence is None:
+        if (
+            localization_confidence is None
+            or vegetarian_confidence is None
+            or vegan_confidence is None
+        ):
             return None
-        if is_vegan and not is_vegetarian:
+        is_vegetarian = _gate_bool(is_vegetarian, vegetarian_confidence)
+        is_vegan = _gate_bool(is_vegan, vegan_confidence)
+        is_localized = _gate_bool(is_localized, localization_confidence)
+        if is_vegan:
             is_vegetarian = True
         if is_localized and not note:
             return None
@@ -125,7 +157,9 @@ def validate_enrichment_row(
         "is_vegetarian": is_vegetarian,
         "is_vegan": is_vegan,
         "is_localized": is_localized,
-        "localization_confidence": confidence,
+        "vegetarian_confidence": vegetarian_confidence,
+        "vegan_confidence": vegan_confidence,
+        "localization_confidence": localization_confidence,
         "localization_note": note,
     }
 
@@ -171,6 +205,8 @@ def apply_enrichment_to_rows(
         row.is_vegetarian = validated["is_vegetarian"]
         row.is_vegan = validated["is_vegan"]
         row.is_localized = validated["is_localized"]
+        row.vegetarian_confidence = validated["vegetarian_confidence"]
+        row.vegan_confidence = validated["vegan_confidence"]
         row.localization_confidence = validated["localization_confidence"]
         row.localization_note = validated["localization_note"]
         row.enrichment_version = enrichment_version
@@ -313,6 +349,7 @@ def enrich_observation_items(
 
 
 __all__ = [
+    "CONFIDENCE_TRUE_THRESHOLD",
     "ENRICHMENT_BATCH_SIZE",
     "MENU_ENRICHMENT_VERSION",
     "MenuEnrichResult",

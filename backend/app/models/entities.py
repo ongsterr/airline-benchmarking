@@ -313,6 +313,8 @@ class MenuItem(Base):
     is_vegetarian: Mapped[bool | None] = mapped_column(Boolean)
     is_vegan: Mapped[bool | None] = mapped_column(Boolean)
     is_localized: Mapped[bool | None] = mapped_column(Boolean)
+    vegetarian_confidence: Mapped[float | None] = mapped_column(Float)
+    vegan_confidence: Mapped[float | None] = mapped_column(Float)
     localization_confidence: Mapped[float | None] = mapped_column(Float)
     localization_note: Mapped[str | None] = mapped_column(Text)
     enrichment_version: Mapped[str | None] = mapped_column(String(100))
