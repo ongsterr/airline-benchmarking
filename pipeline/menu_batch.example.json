@@ -1,0 +1,20 @@
+{
+  "defaults": {
+    "cabins": [
+      "first",
+      "business",
+      "premium_economy",
+      "economy"
+    ],
+    "force": false,
+    "skip_existing": true
+  },
+  "extractions": [
+    {
+      "date": "2026-07-25",
+      "flight": "EK587",
+      "origin": "DAC",
+      "destination": "DXB"
+    }
+  ]
+}

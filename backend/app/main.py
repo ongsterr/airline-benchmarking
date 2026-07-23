@@ -44,6 +44,7 @@ from shared.schemas import (
     CompareResponse,
     MenuCompareResponse,
     MenuFilterOptionsResponse,
+    PipelineMenuTriggerRequest,
     PipelineRunResponse,
     PipelineTriggerRequest,
 )
@@ -313,6 +314,15 @@ def trigger_flight_pipeline(
     return pipeline_router.trigger_flight(db, body)
 
 
+@app.post("/api/v1/pipeline/menu", response_model=PipelineRunResponse, status_code=202)
+def trigger_menu_pipeline(
+    body: PipelineMenuTriggerRequest,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_edit_auth),
+) -> PipelineRunResponse:
+    return pipeline_router.trigger_menu(db, body)
+
+
 @app.get("/api/v1/pipeline/runs/active", response_model=PipelineRunResponse | None)
 def get_active_pipeline_run(
     db: Session = Depends(get_db),
@@ -336,6 +346,19 @@ def get_pipeline_run(
     if not run_record:
         raise HTTPException(status_code=404, detail="Pipeline run not found")
     return pipeline_router.pipeline_run_to_response(run_record)
+
+
+@app.post("/api/v1/pipeline/runs/{run_id}/cancel", response_model=PipelineRunResponse)
+def cancel_pipeline_run(
+    run_id: str,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_edit_auth),
+) -> PipelineRunResponse:
+    try:
+        run_uuid = uuid.UUID(run_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid run id") from exc
+    return pipeline_router.cancel_run(db, run_uuid)
 
 
 @app.get("/api/v1/export.csv")

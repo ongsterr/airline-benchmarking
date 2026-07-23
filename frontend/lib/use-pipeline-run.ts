@@ -2,13 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  cancelPipelineRun,
   getActivePipelineRun,
   getPipelineRun,
+  type MenuPipelineTriggerConfig,
   type PipelineRun,
   type PipelineTriggerOptions,
-  type PipelineType,
   triggerFlightPipeline,
   triggerHardwarePipeline,
+  triggerMenuPipeline,
 } from "@/lib/api";
 
 const POLL_INTERVAL_MS = 2500;
@@ -57,16 +59,12 @@ export function usePipelineRun() {
     [pollRun, stopPolling]
   );
 
-  const startPipeline = useCallback(
-    async (pipelineType: PipelineType, options: PipelineTriggerOptions) => {
+  const beginRun = useCallback(
+    async (trigger: () => Promise<PipelineRun>) => {
       setError(null);
       setIsStarting(true);
       try {
-        const trigger =
-          pipelineType === "hardware"
-            ? triggerHardwarePipeline
-            : triggerFlightPipeline;
-        const run = await trigger(options);
+        const run = await trigger();
         setActiveRun(run);
         if (run.status === "running") {
           startPolling(run.id);
@@ -78,6 +76,18 @@ export function usePipelineRun() {
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to start pipeline";
         setError(message);
+        // If another run is blocking (409), surface it so the user can Cancel.
+        if (message.includes("409") || message.toLowerCase().includes("already in progress")) {
+          try {
+            const active = await getActivePipelineRun();
+            if (active?.status === "running") {
+              setActiveRun(active);
+              startPolling(active.id);
+            }
+          } catch {
+            // Keep the original start error.
+          }
+        }
         throw err;
       } finally {
         setIsStarting(false);
@@ -87,13 +97,21 @@ export function usePipelineRun() {
   );
 
   const startHardware = useCallback(
-    (options: PipelineTriggerOptions) => startPipeline("hardware", options),
-    [startPipeline]
+    (options: PipelineTriggerOptions) =>
+      beginRun(() => triggerHardwarePipeline(options)),
+    [beginRun]
   );
 
   const startFlight = useCallback(
-    (options: PipelineTriggerOptions) => startPipeline("flight", options),
-    [startPipeline]
+    (options: PipelineTriggerOptions) =>
+      beginRun(() => triggerFlightPipeline(options)),
+    [beginRun]
+  );
+
+  const startMenu = useCallback(
+    (config: MenuPipelineTriggerConfig) =>
+      beginRun(() => triggerMenuPipeline(config)),
+    [beginRun]
   );
 
   useEffect(() => {
@@ -120,6 +138,24 @@ export function usePipelineRun() {
     setLastResult(null);
   }, []);
 
+  const cancelActive = useCallback(async () => {
+    const runId = activeRun?.id;
+    if (!runId) return null;
+    setError(null);
+    try {
+      const run = await cancelPipelineRun(runId);
+      stopPolling();
+      setLastResult(run);
+      setActiveRun(null);
+      return run;
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to cancel pipeline";
+      setError(message);
+      throw err;
+    }
+  }, [activeRun?.id, stopPolling]);
+
   return {
     activeRun,
     lastResult,
@@ -128,6 +164,8 @@ export function usePipelineRun() {
     isStarting,
     startHardware,
     startFlight,
+    startMenu,
+    cancelActive,
     clearError: () => setError(null),
     clearLastResult,
   };

@@ -397,6 +397,27 @@ class PipelineTriggerRequest(BaseModel):
     skip_existing: bool = False
 
 
+class MenuTriggerEntry(BaseModel):
+    date: str
+    flight: str
+    origin: str
+    destination: str
+    cabins: list[str] | None = None
+    force: bool | None = None
+    skip_existing: bool | None = None
+
+
+class MenuTriggerDefaults(BaseModel):
+    cabins: list[str] | None = None
+    force: bool = False
+    skip_existing: bool = False
+
+
+class PipelineMenuTriggerRequest(BaseModel):
+    defaults: MenuTriggerDefaults | None = None
+    extractions: list[MenuTriggerEntry]
+
+
 class PipelineRunResponse(BaseModel):
     id: str
     pipeline_type: PipelineType

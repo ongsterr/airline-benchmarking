@@ -4,10 +4,9 @@ import { Loader2 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { usePipelineRunContext } from "@/lib/pipeline-run-context";
-import type { PipelineType } from "@/lib/api";
 
 type PipelineTriggerButtonProps = {
-  pipelineType: PipelineType;
+  pipelineType: "hardware" | "flight";
   airlines: string[];
   canTrigger: boolean;
   onSignInRequired?: () => void;

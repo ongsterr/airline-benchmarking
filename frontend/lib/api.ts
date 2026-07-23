@@ -355,7 +355,7 @@ export async function downloadFleetCsv(ids: string[]): Promise<void> {
   window.URL.revokeObjectURL(url);
 }
 
-export type PipelineType = "hardware" | "flight";
+export type PipelineType = "hardware" | "flight" | "menu";
 export type PipelineRunStatus = "running" | "completed" | "failed";
 
 export type PipelineRun = {
@@ -375,6 +375,23 @@ export type PipelineTriggerOptions = {
   airlines: string[];
   force?: boolean;
   skipExisting?: boolean;
+};
+
+export type MenuPipelineTriggerConfig = {
+  defaults?: {
+    cabins?: string[];
+    force?: boolean;
+    skip_existing?: boolean;
+  };
+  extractions: Array<{
+    date: string;
+    flight: string;
+    origin: string;
+    destination: string;
+    cabins?: string[];
+    force?: boolean;
+    skip_existing?: boolean;
+  }>;
 };
 
 async function pipelineFetchApi<T>(
@@ -427,9 +444,26 @@ export async function triggerFlightPipeline(
   });
 }
 
+export async function triggerMenuPipeline(
+  config: MenuPipelineTriggerConfig
+): Promise<PipelineRun> {
+  return pipelineFetchApi<PipelineRun>("/api/v1/pipeline/menu", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(config),
+  });
+}
+
 export async function getPipelineRun(runId: string): Promise<PipelineRun> {
   return pipelineFetchApi<PipelineRun>(
     `/api/v1/pipeline/runs/${encodeURIComponent(runId)}`
+  );
+}
+
+export async function cancelPipelineRun(runId: string): Promise<PipelineRun> {
+  return pipelineFetchApi<PipelineRun>(
+    `/api/v1/pipeline/runs/${encodeURIComponent(runId)}/cancel`,
+    { method: "POST" }
   );
 }
 

@@ -73,6 +73,13 @@ poetry run python -m pipeline.run_menu --date 2026-08-01 --flight 7 --origin DXB
 poetry run python -m pipeline.run_menu --date 2026-08-01 --flight 7 --origin DXB --destination LHR --cabins business,economy
 poetry run python -m pipeline.run_menu --date 2026-08-01 --flight 7 --origin DXB --destination LHR --force
 
+# Batch many flights from a JSON config (see pipeline/menu_batch.example.json)
+# Each extractions[] entry: date, flight, origin, destination; optional cabins / force / skip_existing
+# Optional top-level defaults merge into every entry (per-entry keys win). CLI --force / --skip-existing override all.
+poetry run python -m pipeline.run_menu_batch --config pipeline/menu_batch.example.json
+poetry run python -m pipeline.run_menu_batch --config my_batch.json --skip-existing
+poetry run python -m pipeline.run_menu_batch --config my_batch.json --dry-run
+
 # Backend API
 poetry run uvicorn backend.app.main:app --reload --port 8000
 

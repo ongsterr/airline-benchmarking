@@ -1,12 +1,14 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { EmptyState } from "@/components/empty-state";
 import { EmptyTableRow, LoadingState } from "@/components/loading-state";
+import { MenuExtractSection } from "@/components/menu-extract-section";
 import { MenuFlightSelector } from "@/components/menu-flight-selector";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
+import { SignInDialog } from "@/components/sign-in-dialog";
 import { TableToolbar } from "@/components/table-toolbar";
 import {
   Select,
@@ -63,6 +65,7 @@ import {
   SUMMARY_METRICS_BY_FOOD_TYPE,
   type MenuFoodTypeKey,
 } from "@/lib/menu-fields";
+import { useEditAuth } from "@/lib/use-edit-auth";
 import { cn } from "@/lib/utils";
 
 function parseIds(param: string | null): string[] {
@@ -240,6 +243,34 @@ export default function MenuPageClient() {
   const [compareLoading, setCompareLoading] = useState(false);
   const [compareError, setCompareError] = useState<string | null>(null);
 
+  const { isAuthenticated, isLoading: authLoading, login } = useEditAuth();
+  const [signInOpen, setSignInOpen] = useState(false);
+  const [signInPassword, setSignInPassword] = useState("");
+  const [signInError, setSignInError] = useState<string | null>(null);
+  const [signingIn, setSigningIn] = useState(false);
+
+  const canTrigger = isAuthenticated;
+
+  const openSignIn = useCallback(() => {
+    setSignInError(null);
+    setSignInOpen(true);
+  }, []);
+
+  const handleSignIn = async (e: FormEvent) => {
+    e.preventDefault();
+    setSignInError(null);
+    setSigningIn(true);
+    try {
+      await login(signInPassword);
+      setSignInOpen(false);
+      setSignInPassword("");
+    } catch (err) {
+      setSignInError(err instanceof Error ? err.message : "Sign in failed");
+    } finally {
+      setSigningIn(false);
+    }
+  };
+
   const syncUrl = useCallback(
     (next: {
       cabin?: CabinKey;
@@ -268,6 +299,38 @@ export default function MenuPageClient() {
     },
     [cabin, category, itemType, pathname, router, searchParams, selectedIds]
   );
+
+  const refreshMenuData = useCallback(async () => {
+    try {
+      const data = await getMenuFilterOptions({ cabin, item_type: itemType });
+      setOptions(data.observations);
+      setOptionsError(null);
+      const valid = new Set(data.observations.map((o) => o.observation_id));
+      setSelectedIds((prev) => {
+        const next = prev.filter((id) => valid.has(id));
+        if (next.length !== prev.length) {
+          syncUrl({ ids: next });
+        }
+        return next;
+      });
+    } catch {
+      // Keep existing options on refresh failure.
+    }
+
+    if (selectedIds.length < MIN_COMPARE_CONFIGS) {
+      return;
+    }
+    try {
+      const data = await getMenuCompare(selectedIds, {
+        cabin,
+        item_type: itemType,
+      });
+      setCompare(data);
+      setCompareError(null);
+    } catch {
+      // Keep existing compare on refresh failure.
+    }
+  }, [cabin, itemType, selectedIds, syncUrl]);
 
   useEffect(() => {
     let cancelled = false;
@@ -430,6 +493,15 @@ export default function MenuPageClient() {
         title="Menu Items Analysis"
         description="Compare onboard menu composition across Emirates flights for a cabin and item type."
       />
+
+      <SectionCard title="Extract menu">
+        <MenuExtractSection
+          canTrigger={canTrigger}
+          isAuthLoading={authLoading}
+          onSignInRequired={openSignIn}
+          onComplete={() => void refreshMenuData()}
+        />
+      </SectionCard>
 
       <SectionCard title="Filters" overflowVisible>
         <div className="px-4 py-3">
@@ -692,6 +764,17 @@ export default function MenuPageClient() {
           </SectionCard>
         </>
       )}
+
+      <SignInDialog
+        open={signInOpen}
+        onOpenChange={setSignInOpen}
+        password={signInPassword}
+        onPasswordChange={setSignInPassword}
+        error={signInError}
+        signingIn={signingIn}
+        onSubmit={handleSignIn}
+        description="Enter the edit password to run menu extraction pipelines."
+      />
     </div>
   );
 }

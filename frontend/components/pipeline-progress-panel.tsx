@@ -13,11 +13,15 @@ type PipelineProgressPanelProps = {
 };
 
 function pipelineTitle(pipelineType: PipelineType) {
-  return pipelineType === "hardware" ? "Hardware extraction" : "Flight extraction";
+  if (pipelineType === "hardware") return "Hardware extraction";
+  if (pipelineType === "menu") return "Menu extraction";
+  return "Flight extraction";
 }
 
 function progressUnit(pipelineType: PipelineType) {
-  return pipelineType === "hardware" ? "configs" : "airlines";
+  if (pipelineType === "hardware") return "configs";
+  if (pipelineType === "menu") return "cabins";
+  return "airlines";
 }
 
 function formatAirlines(airlines: string[]) {
@@ -49,6 +53,7 @@ export function PipelineProgressPanel({ onComplete }: PipelineProgressPanelProps
     lastResult,
     error,
     isStarting,
+    cancelActive,
     clearError,
     clearLastResult,
   } = usePipelineRunContext();
@@ -78,6 +83,12 @@ export function PipelineProgressPanel({ onComplete }: PipelineProgressPanelProps
   const handleDismiss = () => {
     clearError();
     clearLastResult();
+  };
+
+  const handleCancel = () => {
+    void cancelActive().catch(() => {
+      // Error surfaced via hook.
+    });
   };
 
   if (error && !run) {
@@ -123,18 +134,31 @@ export function PipelineProgressPanel({ onComplete }: PipelineProgressPanelProps
           <Badge variant={statusBadgeVariant(run.status)}>{statusLabel(run.status)}</Badge>
           <span className="text-xs text-muted-foreground">{formatAirlines(run.airlines)}</span>
         </div>
-        {isFinished && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-6 px-1.5"
-            onClick={handleDismiss}
-            aria-label="Dismiss progress"
-          >
-            <X className="size-3.5" />
-          </Button>
-        )}
+        <div className="flex items-center gap-1">
+          {isRunning && activeRun && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-6 px-2 text-[11px]"
+              onClick={handleCancel}
+            >
+              Cancel
+            </Button>
+          )}
+          {isFinished && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 px-1.5"
+              onClick={handleDismiss}
+              aria-label="Dismiss progress"
+            >
+              <X className="size-3.5" />
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="mt-2 space-y-1">
