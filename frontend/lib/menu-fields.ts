@@ -26,6 +26,15 @@ export type MenuSummaryMetricKey = (typeof MENU_SUMMARY_METRICS)[number]["key"];
 
 export type MenuFoodTypeKey = MenuItemType | "unenriched";
 
+export const SUMMARY_METRICS_BY_FOOD_TYPE: Record<
+  MenuFoodTypeKey,
+  MenuSummaryMetricKey[]
+> = {
+  beverage: ["alcoholic", "non_alcoholic"],
+  food: ["vegetarian", "vegan", "localized"],
+  unenriched: [],
+};
+
 export type MenuPivotedRow = {
   foodType: MenuFoodTypeKey;
   foodTypeLabel: string;

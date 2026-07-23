@@ -349,6 +349,8 @@ class MenuCompareItemDetail(BaseModel):
     is_vegetarian: bool | None = None
     is_vegan: bool | None = None
     is_localized: bool | None = None
+    localization_note: str | None = None
+    localization_confidence: float | None = None
     enriched: bool = False
 
 

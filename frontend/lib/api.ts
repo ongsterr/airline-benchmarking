@@ -489,6 +489,8 @@ export type MenuCompareItemDetail = {
   is_vegetarian: boolean | null;
   is_vegan: boolean | null;
   is_localized: boolean | null;
+  localization_note: string | null;
+  localization_confidence: number | null;
   enriched: boolean;
 };
 

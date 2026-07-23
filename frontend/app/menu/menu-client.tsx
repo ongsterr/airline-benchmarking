@@ -24,6 +24,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   CABINS,
   COMPARE_AIRLINE_COLUMN_CLASS,
   COMPARE_FEATURE_COLUMN_CLASS,
@@ -36,6 +41,7 @@ import {
 import {
   getMenuCompare,
   getMenuFilterOptions,
+  type MenuCompareItemDetail,
   type MenuCompareResponse,
   type MenuFlightOption,
   type MenuItemTypeFilter,
@@ -54,6 +60,8 @@ import {
   MENU_ITEM_TYPE_OPTIONS,
   MENU_SUMMARY_METRICS,
   pivotMenuCompareRows,
+  SUMMARY_METRICS_BY_FOOD_TYPE,
+  type MenuFoodTypeKey,
 } from "@/lib/menu-fields";
 import { cn } from "@/lib/utils";
 
@@ -72,9 +80,11 @@ function isItemTypeFilter(value: string | null): value is MenuItemTypeFilter {
 function SummaryCell({
   counts,
   available,
+  foodType,
 }: {
   counts: MenuMetricCounts;
   available: boolean;
+  foodType: MenuFoodTypeKey;
 }) {
   if (!available) {
     return (
@@ -84,20 +94,71 @@ function SummaryCell({
   if (counts.total_items === 0) {
     return <p className="text-[11px] text-muted-foreground">—</p>;
   }
+
+  const metricKeys = SUMMARY_METRICS_BY_FOOD_TYPE[foodType];
+  const metrics = MENU_SUMMARY_METRICS.filter((m) => metricKeys.includes(m.key));
+  const unenrichedCount = counts.total_items - counts.enriched_items;
+
+  if (metrics.length === 0) {
+    return (
+      <p className="text-[11px] text-muted-foreground">
+        {unenrichedCount > 0
+          ? `${unenrichedCount} unenriched`
+          : `${counts.total_items} item${counts.total_items === 1 ? "" : "s"}`}
+      </p>
+    );
+  }
+
   return (
     <ul className="space-y-0.5 text-[11px] tabular-nums">
-      {MENU_SUMMARY_METRICS.map((metric) => (
-        <li key={metric.key} className="flex justify-between gap-3">
-          <span className="text-muted-foreground">{metric.label}</span>
-          <span className="font-medium">{counts[metric.key]}</span>
-        </li>
-      ))}
-      {counts.enriched_items < counts.total_items && (
+      {metrics.map((metric) => {
+        const isLocalized = metric.key === "localized";
+        return (
+          <li key={metric.key} className="flex justify-between gap-3">
+            <span
+              className={cn(
+                isLocalized
+                  ? "font-semibold text-primary"
+                  : "text-muted-foreground"
+              )}
+            >
+              {metric.label}
+            </span>
+            <span
+              className={cn(
+                "font-medium",
+                isLocalized && "font-semibold text-primary"
+              )}
+            >
+              {counts[metric.key]}
+            </span>
+          </li>
+        );
+      })}
+      {unenrichedCount > 0 && (
         <li className="pt-0.5 text-muted-foreground">
-          {counts.total_items - counts.enriched_items} unenriched
+          {unenrichedCount} unenriched
         </li>
       )}
     </ul>
+  );
+}
+
+function LocalizedFlag({ item }: { item: MenuCompareItemDetail }) {
+  const confidencePct =
+    item.localization_confidence != null
+      ? Math.round(item.localization_confidence * 100)
+      : null;
+  return (
+    <Tooltip>
+      <TooltipTrigger className="cursor-default font-semibold uppercase tracking-wide text-primary">
+        localised
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs flex-col items-start gap-0.5 whitespace-normal text-left">
+        {item.localization_note && <p>{item.localization_note}</p>}
+        {confidencePct != null && <p>Confidence {confidencePct}%</p>}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -122,15 +183,26 @@ function DetailCell({
         const flags = itemFlagLabels(item);
         return (
           <li key={item.item_hash || `${item.code}-${item.position}`}>
-            <p className="font-medium leading-snug">{item.title || item.code || "Untitled"}</p>
+            <p className="font-medium leading-snug">
+              {item.title || item.code || "Untitled"}
+            </p>
             {item.desc && (
               <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
                 {item.desc}
               </p>
             )}
             {flags.length > 0 && (
-              <p className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                {flags.join(" · ")}
+              <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                {flags.map((flag, index) => (
+                  <span key={flag} className="inline-flex items-center gap-1.5">
+                    {index > 0 && <span aria-hidden>·</span>}
+                    {flag === "localised" ? (
+                      <LocalizedFlag item={item} />
+                    ) : (
+                      <span>{flag}</span>
+                    )}
+                  </span>
+                ))}
               </p>
             )}
           </li>
@@ -515,6 +587,7 @@ export default function MenuPageClient() {
                                     emptyMetricCounts()
                                   }
                                   available={col.available}
+                                  foodType={row.foodType}
                                 />
                               </TableCell>
                             ))}

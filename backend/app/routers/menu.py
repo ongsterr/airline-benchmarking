@@ -130,6 +130,8 @@ def _to_detail(item: MenuItem) -> MenuCompareItemDetail:
         is_vegetarian=item.is_vegetarian,
         is_vegan=item.is_vegan,
         is_localized=item.is_localized,
+        localization_note=item.localization_note,
+        localization_confidence=item.localization_confidence,
         enriched=item.enriched_at is not None,
     )
 
